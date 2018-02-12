@@ -86,9 +86,10 @@ let rec condition e truel falsel =
   expr_typ : typ        (* chaque expression est décorée par son type *)
 }*)
     and generateUnop e destr destl = match e with
-    	| Ttree.Eunop (Ptree.Unot, e1)   -> failwith "à voir"
+    	| Ttree.Eunop (Ptree.Unot, e)  -> let lres = generate (Emunop ((Ops.Msetei (Int32.of_int 0)), destr, destl)) in let le = expr e destr lres in le 
     	| Ttree.Eunop (Ptree.Uminus, e) -> generateBinop (Ttree.Ebinop (Ptree.Bsub, {Ttree.expr_node = Ttree.Econst (Int32.of_int 0); Ttree.expr_typ = Ttree.Tint}, e)) destr destl
     	| _ -> failwith "nope"
+
 (*and decl_fun = {
   fun_typ    : typ;
   fun_name   : ident;
