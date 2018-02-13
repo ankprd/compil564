@@ -76,9 +76,14 @@ let rec condition e truel falsel =
 		| Ttree.Sblock (decvarl, stmtl) -> (let rec populate l = (match l with
     											| [] -> []
     											| x::ll -> let nreg = Register.fresh () in Hashtbl.add locenv x nreg; (nreg)::populate ll) in
-    									   let addedvars = populate decvarl in
+    									   let _ = populate decvarl in
     									   let l1 = List.fold_right (fun stm labelnext -> stmt stm labelnext retr exitl) stmtl destl in
     									   List.iter  (fun v -> Hashtbl.remove locenv v) decvarl; l1)
+		| Ttree.Sif (e, strue, sfalse)  -> let lfalse = stmt sfalse destl retr exitl and ltrue = stmt strue destl retr exitl in
+										   let rintermed = Register.fresh () in
+										   let comparee = generate (Emubranch (Ops.Mjz, rintermed, lfalse, ltrue)) in
+										   let computee = expr e rintermed comparee in
+										   computee
 		| _ -> failwith "unimplemented stmt"
     (*
 	    	type binop = | Beq | Bneq | Blt | Ble | Bgt | Bge |
