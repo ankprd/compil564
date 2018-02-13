@@ -63,6 +63,10 @@ let rec condition e truel falsel =
 																		    let l1 = expr e1 rinter lres in expr e2 destr l1)
 												| _                     -> failwith "Unreachable type")
 		| Ttree.Esizeof s -> generate (Econst (Int32.of_int (8 * (List.length s.Ttree.str_ordered_fields)), destr, destl))
+		(* Ecall of register * string * register list * label *)
+		| Ttree.Ecall (fid, exprlist) -> let nargs = List.length exprlist and myregs = List.map (fun x -> Register.fresh ()) exprlist in
+										 let lres = generate (Ecall (destr, fid, myregs, destl)) in
+										 List.fold_right2 (fun arg reg lab -> expr arg reg lab) exprlist myregs lres
 		| _ -> failwith "not yet done expr"
  
   and stmt (s : Ttree.stmt) destl retr exitl = match s with
