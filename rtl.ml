@@ -8,6 +8,11 @@ let locenv : ((Ttree.decl_var, register) Hashtbl.t) = Hashtbl.create 1
 
 let generate i = let l = Label.fresh () in graph := Label.M.add l i !graph; l
 
+let indexInList e l =
+	let rec aux i ll = match ll with
+		| []   -> i
+		| x::q -> if x = e then i else aux (i+1) q in
+	aux 0 l
 
 let ptreeOp2Mbinop op = match op with
 	| Ptree.Badd -> Ops.Madd
@@ -44,7 +49,10 @@ let rec condition e truel falsel =
 					                            	expr expAAss regRes labelAss
 		| Ttree.Ebinop _ -> generateBinop e.Ttree.expr_node destr destl
 		| Ttree.Eunop  _ -> generateUnop e.Ttree.expr_node destr destl
-		(*| Ttree.Eaccess_field (e, f) -> let *)
+		| Ttree.Eaccess_field (ex, f) -> (match ex.Ttree.expr_typ with
+											| Ttree.Tstructp s -> (let n = indexInList f.Ttree.field_name s.Ttree.str_ordered_fields and rintermed = Register.fresh () in
+																  let lres = generate (Eload (rintermed, n*8, destr, destl)) in expr ex rintermed lres)
+											| _                -> failwith "Unreachable type")
 		| _ -> failwith "not yet done expr"
  
   and stmt (s : Ttree.stmt) destl retr exitl = match s with

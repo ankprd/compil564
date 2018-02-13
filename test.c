@@ -4,11 +4,15 @@
 // la commande 'make' recompile mini-c (si nécessaire)
 // et le lance sur ce fichier
 
+struct S
+{
+	int a;
+	int b;
+	int c;
+};
 
 int main() {
-  int a;
-  int b;
-  a = 2;
-  b = 3;
-  return a; 
+  struct S *u;
+
+  return u->b; 
 }
