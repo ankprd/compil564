@@ -70,8 +70,15 @@ let rec condition e truel falsel =
  
   and stmt (s : Ttree.stmt) destl retr exitl = match s with
 		| Ttree.Sreturn e -> expr e retr exitl
-		| Ttree.Sexpr e -> let unusedReg = Register.fresh() in expr e unusedReg destl
-		| Ttree.Sskip -> destl
+		| Ttree.Sexpr e   -> let unusedReg = Register.fresh() in expr e unusedReg destl
+		| Ttree.Sskip     -> destl
+		(* Idiome repris de "fct" *)
+		| Ttree.Sblock (decvarl, stmtl) -> (let rec populate l = (match l with
+    											| [] -> []
+    											| x::ll -> let nreg = Register.fresh () in Hashtbl.add locenv x nreg; (nreg)::populate ll) in
+    									   let addedvars = populate decvarl in
+    									   let l1 = List.fold_right (fun stm labelnext -> stmt stm labelnext retr exitl) stmtl destl in
+    									   List.iter  (fun v -> Hashtbl.remove locenv v) decvarl; l1)
 		| _ -> failwith "unimplemented stmt"
     (*
 	    	type binop = | Beq | Bneq | Blt | Ble | Bgt | Bge |
