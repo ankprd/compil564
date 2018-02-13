@@ -76,9 +76,9 @@ let rec condition e truel falsel =
 	   Renvoie : le label de l'entry point qui permet de calculer cette expression dans le graphe *)
 	and expr (e : Ttree.expr) destr destl = match e.Ttree.expr_node with
 		| Ttree.Econst n -> generate (Econst (n, destr, destl))
-		| Ttree.Eaccess_local nomVar ->  let regVar = Hashtbl.find locenv (e.Ttree.expr_typ, nomVar) in generate (Eload (regVar, 0, destr, destl))
+		| Ttree.Eaccess_local nomVar ->  let regVar = Hashtbl.find locenv (e.Ttree.expr_typ, nomVar) in generate (Embinop (Ops.Mmov, regVar, destr, destl))
 		| Ttree.Eassign_local (nomVar, expAAss) -> 	let regVar = Hashtbl.find locenv (e.Ttree.expr_typ, nomVar) in
-					                               	let labelAss = generate (Estore (destr, regVar, 0, destl)) in
+					                               	let labelAss = generate (Embinop (Ops.Mmov, destr, regVar, destl))in
 					                            	expr expAAss destr labelAss
 		| Ttree.Ebinop _ -> generateBinop e.Ttree.expr_node destr destl
 		| Ttree.Eunop  _ -> generateUnop e.Ttree.expr_node destr destl
