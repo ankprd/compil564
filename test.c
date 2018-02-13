@@ -7,10 +7,10 @@
 struct S
 {
 	int a;
+	int b;
 	struct S *p;
 };
 
 int main() {
-  struct S *u;
-  u->p->a = 12;
+  return sizeof(struct S);
 }

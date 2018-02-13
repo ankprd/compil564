@@ -62,6 +62,7 @@ let rec condition e truel falsel =
 																		    let lres = generate (Estore (destr, rinter, n*8, destl)) in
 																		    let l1 = expr e1 rinter lres in expr e2 destr l1)
 												| _                     -> failwith "Unreachable type")
+		| Ttree.Esizeof s -> generate (Econst (Int32.of_int (8 * (List.length s.Ttree.str_ordered_fields)), destr, destl))
 		| _ -> failwith "not yet done expr"
  
   and stmt (s : Ttree.stmt) destl retr exitl = match s with
