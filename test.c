@@ -7,12 +7,10 @@
 struct S
 {
 	int a;
-	int b;
-	int c;
+	struct S *p;
 };
 
 int main() {
   struct S *u;
-
-  return u->b; 
+  u->p->a = 12;
 }
