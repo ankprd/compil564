@@ -54,14 +54,14 @@ let rec condition e truel falsel =
 																	  let lres = generate (Eload (rintermed, n*8, destr, destl)) in expr ex rintermed lres)
 												| _                -> failwith "Unreachable type")
 		| Ttree.Eassign_field (e1, f, e2) -> (match (e1.Ttree.expr_typ, e1.Ttree.expr_node) with
-												| (Ttree.Tstructp s, Ttree.Eaccess_local i)        -> (let regVar = Hashtbl.find locenv (e1.Ttree.expr_typ, i) in
-																									   let n = indexInList f.Ttree.field_name s.Ttree.str_ordered_fields in
-																									   let lres = generate (Estore (destr, regVar, n*8, destl)) in
-																									   expr e2 destr lres)
-												| (Ttree.Tstructp s, _) 		-> (let rinter = Register.fresh () and n = indexInList f.Ttree.field_name s.Ttree.str_ordered_fields in
-																				    let lres = generate (Estore (destr, rinter, n*8, destl)) in
-																				    let l1 = expr e1 rinter lres in expr e2 destr l1)
-												| _                             -> failwith "Unreachable type")
+												| (Ttree.Tstructp s, Ttree.Eaccess_local i)  -> (let regVar = Hashtbl.find locenv (e1.Ttree.expr_typ, i) in
+																								 let n = indexInList f.Ttree.field_name s.Ttree.str_ordered_fields in
+																								 let lres = generate (Estore (destr, regVar, n*8, destl)) in
+																								 expr e2 destr lres)
+												| (Ttree.Tstructp s, _) -> (let rinter = Register.fresh () and n = indexInList f.Ttree.field_name s.Ttree.str_ordered_fields in
+																		    let lres = generate (Estore (destr, rinter, n*8, destl)) in
+																		    let l1 = expr e1 rinter lres in expr e2 destr l1)
+												| _                     -> failwith "Unreachable type")
 		| _ -> failwith "not yet done expr"
  
   and stmt (s : Ttree.stmt) destl retr exitl = match s with
