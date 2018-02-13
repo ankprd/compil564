@@ -64,10 +64,9 @@ let rec condition e truel falsel =
 												| _                     -> failwith "Unreachable type")
 		| Ttree.Esizeof s -> generate (Econst (Int32.of_int (8 * (List.length s.Ttree.str_ordered_fields)), destr, destl))
 		(* Ecall of register * string * register list * label *)
-		| Ttree.Ecall (fid, exprlist) -> let nargs = List.length exprlist and myregs = List.map (fun x -> Register.fresh ()) exprlist in
+		| Ttree.Ecall (fid, exprlist) -> let myregs = List.map (fun x -> Register.fresh ()) exprlist in
 										 let lres = generate (Ecall (destr, fid, myregs, destl)) in
 										 List.fold_right2 (fun arg reg lab -> expr arg reg lab) exprlist myregs lres
-		| _ -> failwith "not yet done expr"
  
   and stmt (s : Ttree.stmt) destl retr exitl = match s with
 		| Ttree.Sreturn e -> expr e retr exitl
@@ -104,6 +103,21 @@ let rec condition e truel falsel =
     											let r2 = Register.fresh () in let lres = generate (Embinop (ptreeOp2Mbinop op, r2, destr, destl)) in
     											let l2 = expr e2 r2 lres in
     											let l1 = expr e1 destr l2 in l1
+    	(* FIXME: vérifier que c'est bien le bon ordre dans les paramètres de mubranch *)
+    	| Ttree.Ebinop (Ptree.Bor, e1, e2) -> (let rintermed = Register.fresh () in 
+    										  let set1 = generate (Econst (Int32.of_int 1, destr, destl)) and set0 = generate (Econst (Int32.of_int 0, destr, destl)) in
+    										  let compare2 = generate (Emubranch (Ops.Mjz, rintermed, set0, set1)) in
+    										  let compute2 = expr e2 rintermed compare2 in
+    										  let compare1 = generate (Emubranch (Ops.Mjz, rintermed, compute2, set1)) in
+    										  let compute1 = expr e1 rintermed compare1 in
+    										  compute1)
+    	| Ttree.Ebinop (Ptree.Band, e1, e2) -> (let rintermed = Register.fresh () in 
+    										  let set1 = generate (Econst (Int32.of_int 1, destr, destl)) and set0 = generate (Econst (Int32.of_int 0, destr, destl)) in
+    										  let compare2 = generate (Emubranch (Ops.Mjz, rintermed, set0, set1)) in
+    										  let compute2 = expr e2 rintermed compare2 in
+    										  let compare1 = generate (Emubranch (Ops.Mjz, rintermed, set0, compute2)) in
+    										  let compute1 = expr e1 rintermed compare1 in
+    										  compute1)
     	| _ -> failwith "Unimplemented binop"
 
 (* type expr = {
