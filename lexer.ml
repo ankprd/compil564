@@ -27,17 +27,17 @@
   let char_error s = raise (Lexical_error ("illegal character sequence: " ^ s))
 
   let decode_char s = match Bytes.length s with
-    | 1 -> Char.code s.[0]
-    | 2 | 4 when s.[0] == '\\' ->
-      begin match s.[1] with
-        | 'n' -> 10 (* Char.code '\n' *)
-        | 't' -> 9  (* Char.code '\t' *)
-        | '\'' -> 39 (* Char.code '\'' *)
-        | '\"' -> 34 (* Char.code '\"' *)
-        | 'x' -> Bytes.set s 0 '0'; int_of_string s
-        | _ -> char_error s
+    | 1 -> Char.code (Bytes.to_string s).[0]
+    | 2 | 4 when (Bytes.to_string s).[0] == '\\' ->
+      begin match (Bytes.to_string s).[1] with
+        | 'n' -> 10 
+        | 't' -> 9
+        | '\'' -> 39
+        | '\"' -> 34
+        | 'x' -> Bytes.set s 0 '0'; int_of_string (Bytes.to_string s)
+        | _ -> char_error (Bytes.to_string s)
       end
-    | _ -> char_error s
+    | _ -> char_error (Bytes.to_string s)
 
 
 # 44 "lexer.ml"
@@ -265,7 +265,7 @@ let
 # 266 "lexer.ml"
 = Lexing.sub_lexeme lexbuf lexbuf.Lexing.lex_start_pos lexbuf.Lexing.lex_curr_pos in
 # 66 "lexer.mll"
-      ( id_or_keyword s )
+      ( id_or_keyword ( s ))
 # 270 "lexer.ml"
 
   | 5 ->
@@ -281,9 +281,9 @@ let
 = Lexing.sub_lexeme lexbuf lexbuf.Lexing.lex_start_pos lexbuf.Lexing.lex_curr_pos in
 # 70 "lexer.mll"
       ( try
-	  INTEGER (Int32.of_string s)
+	  INTEGER (Int32.of_string (s))
 	with _ ->
-	  raise (Lexical_error ("invalid integer constant '" ^ s ^ "'")) )
+	  raise (Lexical_error ("invalid integer constant '" ^ (s) ^ "'")) )
 # 288 "lexer.ml"
 
   | 7 ->
@@ -294,7 +294,7 @@ let
 = Lexing.sub_lexeme lexbuf (lexbuf.Lexing.lex_start_pos + 1) lexbuf.Lexing.lex_curr_pos in
 # 75 "lexer.mll"
       ( try
-	  INTEGER (Int32.of_string ("0o" ^ s))
+	  INTEGER (Int32.of_string ("0o" ^ (s)))
 	with _ ->
 	  raise (Lexical_error ("invalid octal constant '" ^ s ^ "'")) )
 # 301 "lexer.ml"
@@ -307,7 +307,7 @@ let
 = Lexing.sub_lexeme lexbuf lexbuf.Lexing.lex_start_pos lexbuf.Lexing.lex_curr_pos in
 # 80 "lexer.mll"
       ( try
-	  INTEGER (Int32.of_string s)
+	  INTEGER (Int32.of_string (s))
 	with _ ->
 	  raise (Lexical_error ("invalid hexadecimal constant '" ^ s ^ "'")) )
 # 314 "lexer.ml"
@@ -319,7 +319,7 @@ let
 # 320 "lexer.ml"
 = Lexing.sub_lexeme lexbuf (lexbuf.Lexing.lex_start_pos + 1) (lexbuf.Lexing.lex_curr_pos + -1) in
 # 85 "lexer.mll"
-      ( INTEGER (Int32.of_int (decode_char s)) )
+      ( INTEGER (Int32.of_int (decode_char (Bytes.of_string s)) ))
 # 324 "lexer.ml"
 
   | 10 ->

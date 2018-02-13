@@ -8,6 +8,39 @@ let locenv : ((Ttree.decl_var, register) Hashtbl.t) = Hashtbl.create 1
 
 let generate i = let l = Label.fresh () in graph := Label.M.add l i !graph; l
 
+(*
+	    	type binop = | Beq | Bneq | Blt | Ble | Bgt | Bge |
+	    	Badd | Bsub | Bmul | Bdiv | Band | Bor -> fait
+    *)
+    (*
+	    Embinop of mbinop * register * register * label
+	    attention au sens : [op r1 r2] représente [r2 <- r2 op r1]
+	*)
+
+	(*
+	type mbinop =
+  | Mmov
+  | Madd
+  | Msub
+  | Mmul
+  | Mdiv
+  | Msete
+  | Msetne
+  | Msetl
+  | Msetle
+  | Msetg
+  | Msetge
+	*)
+
+let binop2Op bnop = match bnop with
+	| Ptree.Beq  -> Ops.Msete
+	| Ptree.Bneq -> Ops.Msetne
+	| Ptree.Blt  -> Ops.Msetl
+	| Ptree.Ble  -> Ops.Msetle
+	| Ptree.Bgt  -> Ops.Msetg
+	| Ptree.Bge  -> Ops.Msetge
+	| _			 -> failwith "Unreachable binop2Op"
+
 let indexInList e l =
 	let rec aux i ll = match ll with
 		| []   -> i
@@ -87,7 +120,7 @@ let rec condition e truel falsel =
 		| _ -> failwith "unimplemented stmt"
     (*
 	    	type binop = | Beq | Bneq | Blt | Ble | Bgt | Bge |
-	    	Badd | Bsub | Bmul | Bdiv | Band | Bor
+	    	Badd | Bsub | Bmul | Bdiv | Band | Bor -> fait
     *)
     (*
 	    Embinop of mbinop * register * register * label
@@ -130,6 +163,10 @@ let rec condition e truel falsel =
     										  let compare1 = generate (Emubranch (Ops.Mjz, rintermed, set0, compute2)) in
     										  let compute1 = expr e1 rintermed compare1 in
     										  compute1)
+    	| Ttree.Ebinop (op, e1, e2)			-> let rintermed = Register.fresh () in
+    										   let lres = generate (Embinop (binop2Op op, rintermed, destr, destl)) in
+    										   let l2 = expr e2 rintermed lres in let l1 = expr e1 destr l2 in
+    										   l1
     	| _ -> failwith "Unimplemented binop"
 
 (* type expr = {
