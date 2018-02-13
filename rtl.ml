@@ -8,6 +8,7 @@ let locenv : ((Ttree.decl_var, register) Hashtbl.t) = Hashtbl.create 1
 
 let generate i = let l = Label.fresh () in graph := Label.M.add l i !graph; l
 
+
 let ptreeOp2Mbinop op = match op with
 	| Ptree.Badd -> Ops.Madd
 	| Ptree.Bsub -> Ops.Msub
@@ -33,7 +34,8 @@ let rec condition e truel falsel =
 	| _ -> failwith "to do condition"
 
 
-
+	(* Arguments : l'expression, le registre où stocker le résultat de celle-ci, le label à qui passer la main à la fin
+	   Renvoie : le label de l'entry point qui permet de calculer cette expression dans le graphe *)
 	and expr (e : Ttree.expr) destr destl = match e.Ttree.expr_node with
 		| Ttree.Econst n -> generate (Econst (n, destr, destl))
 		| Ttree.Eaccess_local nomVar ->  let regVar = Hashtbl.find locenv (e.Ttree.expr_typ, nomVar) in generate (Eload (regVar, 0, destr, destl))
@@ -42,6 +44,7 @@ let rec condition e truel falsel =
 					                            	expr expAAss regRes labelAss
 		| Ttree.Ebinop _ -> generateBinop e.Ttree.expr_node destr destl
 		| Ttree.Eunop  _ -> generateUnop e.Ttree.expr_node destr destl
+		(*| Ttree.Eaccess_field (e, f) -> let *)
 		| _ -> failwith "not yet done expr"
  
   and stmt (s : Ttree.stmt) destl retr exitl = match s with

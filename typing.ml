@@ -68,14 +68,15 @@ let declareStruct ((nom, listeVar) : Ptree.decl_struct) =
     (
     	let _ = Hashtbl.find declaredStructs nom.Ptree.id in
     	raise (Error ("Redefinition of structure " ^ nom.Ptree.id))
-    ) with Not_found -> Hashtbl.add declaredStructs nom.Ptree.id {str_name = nom.Ptree.id; str_fields = (Hashtbl.create 0)};
+    ) with Not_found -> Hashtbl.add declaredStructs nom.Ptree.id {str_name = nom.Ptree.id; str_fields = (Hashtbl.create 0); str_ordered_fields = []};
   try (
     let fields = Hashtbl.create 2 in
     let listeF = List.map (declareVar false) listeVar in
-    let ajToField (typeF, nomF) = Hashtbl.add fields nomF {field_name = nomF; field_typ = typeF} in
+    let ordered = ref [] in
+    let ajToField (typeF, nomF) = Hashtbl.add fields nomF {field_name = nomF; field_typ = typeF}; ordered := (nomF::!ordered) in
     List.iter ajToField listeF;
 
-    Hashtbl.add declaredStructs nom.Ptree.id {str_name = nom.Ptree.id; str_fields = fields}
+    Hashtbl.add declaredStructs nom.Ptree.id {str_name = nom.Ptree.id; str_fields = fields; str_ordered_fields = List.rev !ordered}
   )
   with Error s -> raise (Error (String.concat "" ["In struct "; nom.Ptree.id; " : "; s]))
 
@@ -212,7 +213,7 @@ and typeExpr e = match e.Ptree.expr_node with
      									    ) with | Not_found -> raise (Error ("Function " ^ funcname.Ptree.id ^ " is undefined !")) | Invalid_argument s -> raise (Error "Bad number of arguments !"))
      (* binop of binop * expr * expr *)
      | Ptree.Ebinop (b, e1, e2) -> typeBinop b e1 e2
-     | Ptree.Esizeof x -> try(let stored = Hashtbl.find declaredStructs x.Ptree.id in {expr_node = Ttree.Esizeof {str_name = x.Ptree.id; str_fields = stored.str_fields}; expr_typ = Ttree.Tint}) with Not_found -> raise (Error ("Undefined structure " ^ x.Ptree.id))
+     | Ptree.Esizeof x -> try(let stored = Hashtbl.find declaredStructs x.Ptree.id in {expr_node = Ttree.Esizeof {str_name = x.Ptree.id; str_fields = stored.str_fields; str_ordered_fields = stored.str_ordered_fields}; expr_typ = Ttree.Tint}) with Not_found -> raise (Error ("Undefined structure " ^ x.Ptree.id))
 
 (* retourne (Some ident, Some (expr, field)), pour pouvoir gérer les 2 cas qui correspondent à des types différents *)
 (*and typeLVar lvar  : (typ * ident) option * (expr * field) option = match lvar with

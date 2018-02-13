@@ -12,6 +12,9 @@ type typ =
 and structure = {
   str_name  : ident;
   str_fields: (ident, field) Hashtbl.t;
+
+  (* Ajout majeur : on stocke la liste ordonnée des champs de la structure *)
+  str_ordered_fields : ident list;
   (* on pourra ajouter plus tard ici la taille totale de la structure *)
 }
 
