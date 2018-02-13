@@ -17,17 +17,17 @@ let ptreeOp2Mbinop op = match op with
 
 let rec condition e truel falsel = 
 	match e.Ttree.expr_node with
-	| Ttree.Econst n when n = 0 -> falsel
+	| Ttree.Econst n when n = (Int32.of_int 0) -> falsel
 	| Ttree.Econst n -> truel
 	| Ttree.Eunop (unope, exprN) -> (
 			match unope with 
-			|Ttree.Unot -> condition exprN falsel truel
-			|Tree.Uneg -> condition exprN truel falsel
+			| Ptree.Unot -> condition exprN falsel truel
+			| Ptree.Uminus -> condition exprN truel falsel
 		)
-	| Tree.Ebinop (binope, expr1, expr2) -> (
+	| Ttree.Ebinop (binope, expr1, expr2) -> (
 			match binope with
-			| Ttree.Band -> condition expr1 (condition expr2 truel falsel) truel
-			| Ttree.Bor -> condition expr1 truel (condition expr2 truel falsel)
+			| Ptree.Band -> condition expr1 (condition expr2 truel falsel) truel
+			| Ptree.Bor -> condition expr1 truel (condition expr2 truel falsel)
 			| _ -> failwith "to do condition"
 		)
 	| _ -> failwith "to do condition"
