@@ -238,8 +238,13 @@ and typeLarrow lvaria =
     match var.expr_typ with
       | Tstructp s -> 
           let structTyp = (try Hashtbl.find declaredStructs s.str_name with Not_found -> raise (Error (String.concat "" ["Undeclared structure : "; s.str_name]))) in
-          let fieldRes = (try Hashtbl.find structTyp.str_fields nomField.Ptree.id with Not_found -> raise (Error (String.concat "" ["No field "; nomField.Ptree.id; " in struct "; s.str_name]))) in
-          (var, fieldRes)
+          let fieldRes = 
+              (try Hashtbl.find structTyp.str_fields nomField.Ptree.id with Not_found -> raise (Error (String.concat "" ["No field "; nomField.Ptree.id; " in struct "; s.str_name]))) in
+              let fieldTyp = (match fieldRes.field_typ with
+                              | Tstructp sf when sf.str_name = s.str_name -> Tstructp s
+                              | _ -> fieldRes.field_typ
+              ) in
+              (var, {field_name = fieldRes.field_name; field_typ = fieldTyp})
       | _ -> raise (Error "Tried to access a field of something that is not a structure")
     ))
  (* Fait la conversion PtreeType -> TtreeType. Va piocher dans declaredStructs s'il le faut et gueule si ça foire *)

@@ -18,9 +18,9 @@ let binop2Op bnop = match bnop with
 	| _			 -> failwith "Unreachable binop2Op"
 
 (* Ça peut se mémoïser ça non ? Changer la datastructure "structure" pour stocker une Hashtbl var -> index plutôt que la liste ordonnée pour obtenir l'index en O(1) *)
-let indexInList e l =
-	print_endline ("Looking for " ^ e ^ " in ");
-	List.map print_endline l;
+let indexInList l e =
+	(*print_endline ("Looking for " ^ e ^ " in ");*)
+	(*List.map print_endline l;*)
 	let rec aux i ll = match ll with
 		| []   -> prerr_endline "not found element in struct"; i
 		| x::q -> if x = e then i else aux (i+1) q in
@@ -55,7 +55,9 @@ let rec condition e truel falsel =
 	   Renvoie : le label de l'entry point qui permet de calculer cette expression dans le graphe *)
 	and expr (e : Ttree.expr) destr destl = match e.Ttree.expr_node with
 		| Ttree.Econst n -> generate (Econst (n, destr, destl))
-		| Ttree.Eaccess_local nomVar ->  let regVar = Hashtbl.find locenv (e.Ttree.expr_typ, nomVar) in generate (Embinop (Ops.Mmov, regVar, destr, destl))
+		| Ttree.Eaccess_local nomVar ->  let regVar = 
+											try (Hashtbl.find locenv (e.Ttree.expr_typ, nomVar)) with Not_found -> Register.fresh ()
+										 in generate (Embinop (Ops.Mmov, regVar, destr, destl))
 
 		(* Attention: ici on génère un simple mov de regvar vers destr, pas un load *)
 		| Ttree.Eassign_local (nomVar, expAAss) -> 	let regVar = Hashtbl.find locenv (e.Ttree.expr_typ, nomVar) in
@@ -82,26 +84,30 @@ let rec condition e truel falsel =
 																		    let l1 = expr e1 rinter lres in expr e2 destr l1)
 												| _                     -> failwith "Unreachable type")
 		*)
-		| Ttree.Eaccess_field (ex, f)     -> print_string ("Access of field " ^ f.field_name);
-											 let regInter = Register.fresh () in
+		| Ttree.Eaccess_field (ex, f)     -> (*print_string ("Access of field " ^ f.field_name);*)
+											 let regInter = Register.fresh () in 
 											 let typeEx = ex.Ttree.expr_typ in
 											 let idField = 
 											 	(match typeEx with
-											 	| Ttree.Tstructp s -> print_endline (" in struct " ^ s.str_name); indexInList f.Ttree.field_name s.Ttree.str_ordered_fields
+											 	| Ttree.Tstructp s -> (*print_endline (" in struct " ^ s.str_name);*) indexInList s.Ttree.str_ordered_fields f.Ttree.field_name
 												| _               -> failwith "Unreachable type"
 											 	) in
+										     (*Register.print Format.std_formatter regInter; print_endline "where the struct is was stored";*)
 											 let laccField = generate (Eload (regInter, idField * 8, destr, destl)) in
 											 expr ex regInter laccField
-		| Ttree.Eassign_field (e1, f, e2) -> print_string ("Assign of field " ^ f.field_name);
+		| Ttree.Eassign_field (e1, f, e2) -> (*print_string ("Assign of field " ^ f.field_name);*)
 											 let regAddrMem = Register.fresh () in
 											 let regValExpr = Register.fresh () in
 											 let typeEx = e1.Ttree.expr_typ in
 											 let idField = 
 											 	(match typeEx with
-											 	| Ttree.Tstructp s -> print_endline (" in struct " ^ s.str_name); indexInList f.Ttree.field_name s.Ttree.str_ordered_fields
+											 	| Ttree.Tstructp s -> (*print_endline (" in struct " ^ s.str_name ^ "with nbFields "); *)indexInList s.Ttree.str_ordered_fields f.Ttree.field_name
 												| _               -> failwith "Unreachable type"
 											 	) in
-											 let laccField = generate (Estore (regValExpr, regAddrMem, idField * 8, destl)) in
+											 (*Register.print Format.std_formatter  regAddrMem; print_endline "where the struct is ";
+											 Register.print Format.std_formatter  regValExpr; print_endline "where the expr res is ";*)
+											 let lassDestr = generate(Embinop (Ops.Mmov, regValExpr, destr, destl)) in
+											 let laccField = generate (Estore (regValExpr, regAddrMem, idField * 8, lassDestr)) in
 											 let lCalcAddr = expr e1 regAddrMem laccField in
 											 expr e2 regValExpr lCalcAddr
 		(* C'est très simple puisque on sait que tous les champs de structure font 8 bytes *)
