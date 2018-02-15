@@ -55,8 +55,7 @@ let rec condition e truel falsel =
 	   Renvoie : le label de l'entry point qui permet de calculer cette expression dans le graphe *)
 	and expr (e : Ttree.expr) destr destl = match e.Ttree.expr_node with
 		| Ttree.Econst n -> generate (Econst (n, destr, destl))
-		| Ttree.Eaccess_local nomVar ->  let regVar = 
-											try (Hashtbl.find locenv (e.Ttree.expr_typ, nomVar)) with Not_found -> Register.fresh ()
+		| Ttree.Eaccess_local nomVar ->  let regVar = Hashtbl.find locenv (e.Ttree.expr_typ, nomVar)
 										 in generate (Embinop (Ops.Mmov, regVar, destr, destl))
 
 		(* Attention: ici on génère un simple mov de regvar vers destr, pas un load *)
@@ -127,7 +126,7 @@ let rec condition e truel falsel =
 		(* Idiome repris de "fct" *)
 		| Ttree.Sblock (decvarl, stmtl) -> (let rec populate l = (match l with
     											| [] -> []
-    											| x::ll -> let nreg = Register.fresh () in Hashtbl.add locenv x nreg; (nreg)::populate ll) in
+    											| x::ll -> let nreg = Register.fresh () in Hashtbl.add locenv x nreg; (nreg)::(populate ll)) in
     									   let _ = populate decvarl in
     									   let l1 = List.fold_right (fun stm labelnext -> stmt stm labelnext retr exitl) stmtl destl in
     									   List.iter  (fun v -> Hashtbl.remove locenv v) decvarl; l1)

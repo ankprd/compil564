@@ -1,12 +1,14 @@
-// un exemple de fichier mini-C
-// à modifier au fur et à mesure des tests
-//
-// la commande 'make' recompile mini-c (si nécessaire)
-// et le lance sur ce fichier
+int run(int steps) {
+  int i;
+  i = 0;
+  while (i < steps) {
+    int j;
+    j;
+    j = 4;
+  }
+}
 
 int main() {
-  int x;
-  x = 0;
-  while(x < 10) x = x+1;
-  return 0; 
+  run(30);
+  return 0;
 }
