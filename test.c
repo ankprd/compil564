@@ -1,7 +1,9 @@
 
 int main() {
-  int i;
-  i;
-  i = 0;
+  if(1)
+  {
+      int i;
+      i;
+  }
   return 0;
 }
