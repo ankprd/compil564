@@ -62,6 +62,7 @@ let rec condition e truel falsel =
 
 		| Ttree.Ebinop _ -> generateBinop e.Ttree.expr_node destr destl
 		| Ttree.Eunop  _ -> generateUnop e.Ttree.expr_node destr destl
+		(*FIX : ne marche pas sur testStructRec.c*)
 		| Ttree.Eaccess_field (ex, f)     -> (match ex.Ttree.expr_typ with
 												| Ttree.Tstructp s -> (let n = indexInList f.Ttree.field_name s.Ttree.str_ordered_fields and rintermed = Register.fresh () in
 																	  let lres = generate (Eload (rintermed, n*8, destr, destl)) in expr ex rintermed lres)
@@ -107,8 +108,14 @@ let rec condition e truel falsel =
 										   let comparee = generate (Emubranch (Ops.Mjz, rintermed, lfalse, ltrue)) in
 										   let computee = expr e rintermed comparee in
 										   computee
-		(* TODO: implémenter le dernier statement : while *)
-		| _ -> failwith "unimplemented stmt"
+		| Ttree.Swhile (e, s) -> (*prerr_endline "Entering while";*)
+								 let lgoto = Label.fresh () in
+								 let lInstr = stmt s lgoto retr exitl in
+								 let regInter = Register.fresh () in
+								 let lIf = generate (Emubranch (Ops.Mjz, regInter, destl, lInstr)) in
+								 let lcalc = expr e regInter lIf in
+								 graph := Label.M.add lgoto (Egoto lcalc) !graph; (*prerr_endline "Exiting while"*); lcalc
+								 
 
     and generateBinop e destr destl = match e with
     	| Ttree.Ebinop (op, e1, e2) when (List.mem op [Ptree.Badd; Ptree.Bsub; Ptree.Bmul; Ptree.Bdiv]) ->  
@@ -131,7 +138,8 @@ let rec condition e truel falsel =
     										  compute1)
     	| Ttree.Ebinop (op, e1, e2)			-> let rintermed = Register.fresh () in
     										   let lres = generate (Embinop (binop2Op op, rintermed, destr, destl)) in
-    										   let l2 = expr e2 rintermed lres in let l1 = expr e1 destr l2 in
+    										   let l2 = expr e2 rintermed lres in 
+											   let l1 = expr e1 destr l2 in
     										   l1
     	| _ -> failwith "Unreachable generateBinop"
 
