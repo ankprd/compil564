@@ -19,8 +19,10 @@ let binop2Op bnop = match bnop with
 
 (* Ça peut se mémoïser ça non ? Changer la datastructure "structure" pour stocker une Hashtbl var -> index plutôt que la liste ordonnée pour obtenir l'index en O(1) *)
 let indexInList e l =
+	print_endline ("Looking for " ^ e ^ " in ");
+	List.map print_endline l;
 	let rec aux i ll = match ll with
-		| []   -> i
+		| []   -> prerr_endline "not found element in struct"; i
 		| x::q -> if x = e then i else aux (i+1) q in
 	aux 0 l
 
@@ -63,7 +65,7 @@ let rec condition e truel falsel =
 		| Ttree.Ebinop _ -> generateBinop e.Ttree.expr_node destr destl
 		| Ttree.Eunop  _ -> generateUnop e.Ttree.expr_node destr destl
 		(*FIX : ne marche pas sur testStructRec.c*)
-		| Ttree.Eaccess_field (ex, f)     -> (match ex.Ttree.expr_typ with
+		(*| Ttree.Eaccess_field (ex, f)     -> (match ex.Ttree.expr_typ with
 												| Ttree.Tstructp s -> (let n = indexInList f.Ttree.field_name s.Ttree.str_ordered_fields and rintermed = Register.fresh () in
 																	  let lres = generate (Eload (rintermed, n*8, destr, destl)) in expr ex rintermed lres)
 												| _                -> failwith "Unreachable type")
@@ -79,7 +81,29 @@ let rec condition e truel falsel =
 																		    let lres = generate (Estore (destr, rinter, n*8, destl)) in
 																		    let l1 = expr e1 rinter lres in expr e2 destr l1)
 												| _                     -> failwith "Unreachable type")
-
+		*)
+		| Ttree.Eaccess_field (ex, f)     -> print_string ("Access of field " ^ f.field_name);
+											 let regInter = Register.fresh () in
+											 let typeEx = ex.Ttree.expr_typ in
+											 let idField = 
+											 	(match typeEx with
+											 	| Ttree.Tstructp s -> print_endline (" in struct " ^ s.str_name); indexInList f.Ttree.field_name s.Ttree.str_ordered_fields
+												| _               -> failwith "Unreachable type"
+											 	) in
+											 let laccField = generate (Eload (regInter, idField * 8, destr, destl)) in
+											 expr ex regInter laccField
+		| Ttree.Eassign_field (e1, f, e2) -> print_string ("Assign of field " ^ f.field_name);
+											 let regAddrMem = Register.fresh () in
+											 let regValExpr = Register.fresh () in
+											 let typeEx = e1.Ttree.expr_typ in
+											 let idField = 
+											 	(match typeEx with
+											 	| Ttree.Tstructp s -> print_endline (" in struct " ^ s.str_name); indexInList f.Ttree.field_name s.Ttree.str_ordered_fields
+												| _               -> failwith "Unreachable type"
+											 	) in
+											 let laccField = generate (Estore (regValExpr, regAddrMem, idField * 8, destl)) in
+											 let lCalcAddr = expr e1 regAddrMem laccField in
+											 expr e2 regValExpr lCalcAddr
 		(* C'est très simple puisque on sait que tous les champs de structure font 8 bytes *)
 		| Ttree.Esizeof s -> generate (Econst (Int32.of_int (8 * (List.length s.Ttree.str_ordered_fields)), destr, destl))
 
@@ -114,7 +138,7 @@ let rec condition e truel falsel =
 								 let regInter = Register.fresh () in
 								 let lIf = generate (Emubranch (Ops.Mjz, regInter, destl, lInstr)) in
 								 let lcalc = expr e regInter lIf in
-								 graph := Label.M.add lgoto (Egoto lcalc) !graph; (*prerr_endline "Exiting while"*); lcalc
+								 graph := Label.M.add lgoto (Egoto lcalc) !graph; (*prerr_endline "Exiting while";*) lcalc
 								 
 
     and generateBinop e destr destl = match e with
