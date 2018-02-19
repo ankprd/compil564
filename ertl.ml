@@ -59,31 +59,41 @@ let fct (f: Rtltree.deffun) =
         |(rf::f, rr::l) -> 
             let labelSuiv = getParams f l offset in
             let curLabel = Label.fresh () in
-            addToGraph curLabel (Embinop(Mmov, rr, rf, labelSuiv)); curLabel (*mov source, dest*)
+            addToGraph curLabel (Embinop(Ops.Mmov, rr, rf, labelSuiv)); curLabel (*mov source, dest*)
     in
     let labelBeforeGetParams = getParams f.Rtltree.fun_formals Register.parameters 16
     in
     let rec savesCalleeReg regList =
         match regList with
-        |[] -> labelBeforeGetParams
+        |[] -> (labelBeforeGetParams, [])
         |r::t -> 
-            let labelSuiv = savesCalleeReg t in
+            let (labelSuiv, lNReg) = savesCalleeReg t in
             let curLabel = Label.fresh () in
-            addToGraph curLabel (Embinop(Mmov, r, Register.fresh (), labelSuiv)); curLabel
+            let nReg = Register.fresh () in
+            addToGraph curLabel (Embinop(Ops.Mmov, r, nReg, labelSuiv)); (curLabel, nReg::lNReg)
     in 
-    let labelBeforeCalleeSaving  = savesCalleeReg Register.callee_saved in
+    let (labelBeforeCalleeSaving, regCalleeSaved)  = savesCalleeReg Register.callee_saved in
     let labelBeginFct = Label.fresh () in
     addToGraph labelBeginFct (Ealloc_frame labelBeforeCalleeSaving);
 
     Label.M.iter instr f.Rtltree.fun_body; 
 
     (*Instruction de sortie de la fct*)
-    (*let labelRet = Label.fresh () in
+    let labelRet = Label.fresh () in
     addToGraph labelRet Ereturn;
     let labelDelFrame = Label.fresh () in
-    addToGraph labelDelFrame (Edelete_frame labelDelFrame)*)
-
-    addToGraph f.Rtltree.fun_exit Ereturn;
+    addToGraph labelDelFrame (Edelete_frame labelDelFrame);
+    let rec restoresCalleeReg regList lNReg = 
+        match (regList, lNReg) with
+        |([], []) -> labelDelFrame
+        |(r::t, n::nt) -> 
+            let labelSuiv = restoresCalleeReg t nt in
+            let curLabel = Label.fresh () in
+            addToGraph curLabel (Embinop(Ops.Mmov, n, r, labelSuiv)); curLabel
+        | _ -> failwith "Not the same number of register saved and of calle saved reg"
+    in
+    let labelRestoresReg = restoresCalleeReg Register.callee_saved regCalleeSaved in
+    addToGraph f.Rtltree.fun_exit (Embinop(Ops.Mmov, f.Rtltree.fun_result, Register.rax, labelRestoresReg));
     {
         fun_name = f.Rtltree.fun_name;
         fun_formals = List.length f.Rtltree.fun_formals; (* nb total d'arguments *)
