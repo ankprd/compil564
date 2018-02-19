@@ -82,29 +82,35 @@ let rec program p =
 and typeFct f = 
   try (
     let (typeF, nomF) = (pType2Ttype f.Ptree.fun_typ, f.Ptree.fun_name) in
-    (* Cette fonction déclare toutes les variables dans l'environnement et nous les retourne typées au sens de Ttree *)
-    let rec declareArgs listArgs = 
-      match listArgs with
-      	| [] -> []
-      	| x::t -> let (xId, xTy) = declareVar true x and res = declareArgs t in ((xId, xTy)::res) in
+    (* Cette fonction dÃ©clare toutes les variables dans l'environnement et nous les retourne typÃ©es au sens de Ttree *)
+    let declareArgs listArgs = 
+    let locenv : ((string, bool) Hashtbl.t) = Hashtbl.create (List.length listArgs) in
+      let rec aux listArgs =
+        match listArgs with
+          | [] -> []
+          | x::t -> (try(
+                  let _ = Hashtbl.find locenv (snd x).Ptree.id in
+                  raise (Error "Variable already exists at this level of the scope !")
+                ) with Not_found -> let (xId, xTy) = declareVar true x in Hashtbl.add locenv (snd x).Ptree.id true; let res = aux t in  (xId, xTy)::res) in
+      aux listArgs in
     
-    (* Maintenant qu'on a typé les arguments, on peut déclarer la fonction dans environnementFcts *)
+    (* Maintenant qu'on a typÃ© les arguments, on peut dÃ©clarer la fonction dans environnementFcts *)
     let listArgs = declareArgs f.Ptree.fun_formals in
-		declareFct nomF.Ptree.id {fun_typ = typeF; fun_name = nomF.Ptree.id; fun_formals = listArgs; fun_body = ([], [])};
+    declareFct nomF.Ptree.id {fun_typ = typeF; fun_name = nomF.Ptree.id; fun_formals = listArgs; fun_body = ([], [])};
 
     let (declVar, listInstr) = f.Ptree.fun_body in
     let listVars = declareArgs declVar in
     let listInstT = List.map (typeStmt typeF) listInstr in
     
 
-    (* On supprime tout ce qu'on a ajouté dans l'environnement *)
+    (* On supprime tout ce qu'on a ajoutÃ© dans l'environnement *)
     List.iter (fun c -> (Hashtbl.remove environnement (snd c))) (listVars);
     List.iter (fun c -> (Hashtbl.remove environnement (snd c))) (listArgs);
     
-    (* Grosse optimisation: je ne stocke pas le body puisque je n'ai pas dans l'idée de m'en resservir après *)
+    (* Grosse optimisation: je ne stocke pas le body puisque je n'ai pas dans l'idÃ©e de m'en resservir aprÃ¨s *)
     {fun_typ = typeF; fun_name =  nomF.Ptree.id; fun_formals  = listArgs; fun_body = (listVars, listInstT)}
   )
-  with Error errorMsg -> raise (Error (String.concat "" ["In function "; f.Ptree.fun_name.Ptree.id; " : "; errorMsg])) (*Quand une erreur est détectée, elle est complétée par la localisation dans la fonction*)
+  with Error errorMsg -> raise (Error (String.concat "" ["In function "; f.Ptree.fun_name.Ptree.id; " : "; errorMsg])) (*Quand une erreur est dÃ©tectÃ©e, elle est complÃ©tÃ©e par la localisation dans la fonction*)
 
 and typeBinop b e1 e2 = let te1 = typeExpr e1 and te2 = typeExpr e2 in
 	match b with
