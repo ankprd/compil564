@@ -1,9 +1,6 @@
-
 int main() {
-  if(1)
-  {
-      int i;
-      i;
-  }
+  putchar(66 + -1);
+  putchar(65 + -(-1));
+  putchar(10);
   return 0;
 }

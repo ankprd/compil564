@@ -19,8 +19,8 @@ let binop2Op bnop = match bnop with
 
 (* Ça peut se mémoïser ça non ? Changer la datastructure "structure" pour stocker une Hashtbl var -> index plutôt que la liste ordonnée pour obtenir l'index en O(1) *)
 let indexInList l e =
-	(*print_endline ("Looking for " ^ e ^ " in ");*)
-	(*List.map print_endline l;*)
+	(*print_endline ("Looking for " ^ e ^ " in ");
+	List.map print_endline l;*)
 	let rec aux i ll = match ll with
 		| []   -> prerr_endline "not found element in struct"; i
 		| x::q -> if x = e then i else aux (i+1) q in

@@ -62,7 +62,12 @@ let declareStruct ((nom, listeVar) : Ptree.decl_struct) =
     let fields = Hashtbl.create 2 in
     let listeF = List.map (declareVar false) listeVar in
     let ordered = ref [] in
-    let ajToField (typeF, nomF) = try(let _ = Hashtbl.find fields nomF in raise (Error "Two or more fields share the same name !")) with Not_found -> Hashtbl.add fields nomF {field_name = nomF; field_typ = typeF} in
+    let ajToField (typeF, nomF) = ordered := nomF::!ordered; try
+    (
+      let _ = Hashtbl.find fields nomF in 
+
+      raise (Error "Two or more fields share the same name !")
+    ) with Not_found -> Hashtbl.add fields nomF {field_name = nomF; field_typ = typeF} in
     List.iter ajToField listeF;
 
     Hashtbl.add declaredStructs nom.Ptree.id {str_name = nom.Ptree.id; str_fields = fields; str_ordered_fields = List.rev !ordered}
