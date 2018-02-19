@@ -1,7 +1,5 @@
-int fact(int n) {
-  if (n <= 1) return 1;
-  return n * fact(n-1);
-}
 int main() {
-  return fact(42);
+  putchar(65);
+  putchar(66);
+  return 0;
 }

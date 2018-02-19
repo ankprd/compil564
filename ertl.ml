@@ -14,13 +14,12 @@ let instr curLabel curInstr =
     |Rtltree.Emubranch (b, r, l1, l2) -> addToGraph curLabel (Emubranch (b, r, l1, l2))
     |Rtltree.Embbranch (b, r1, r2, l1, l2) -> addToGraph curLabel (Embbranch (b, r1, r2, l1, l2))
     |Rtltree.Egoto l -> addToGraph curLabel (Egoto l)
-    | Rtltree.Ecall (r, f, rl, l) -> print_string "Rtltree.Ecall\n";
-                                     let nregs = min (List.length Register.parameters) (List.length rl) in
+    | Rtltree.Ecall (r, f, rl, l) -> let nregs = min (List.length Register.parameters) (List.length rl) in
                                      let nstck = max ((List.length rl) - (List.length Register.parameters))  0 in
                                      if nstck = 0 then
                                      begin
                                         let labcopyresult = Label.fresh () in
-                                        addToGraph labcopyresult (Embinop (Mmov, r, Register.result, l));
+                                        addToGraph labcopyresult (Embinop (Mmov, Register.result, r, l));
 
                                         let labcall = Label.fresh () in
                                         addToGraph labcall (Ecall (f, nregs, labcopyresult));
@@ -36,7 +35,7 @@ let instr curLabel curInstr =
                                                                                           lablast := labcopy;
                                                                                           addMov rll pll in
                                         addMov rl Register.parameters;
-                                        print_string "Added !\n";
+                                        addToGraph curLabel (Egoto !lablast);
                                      end
                                    else
                                    begin
@@ -45,7 +44,7 @@ let instr curLabel curInstr =
                                         addToGraph labunstack (Emunop (Maddi (Int32.of_int (8*nstck)), Register.rsp, l));
 
                                         let labcopyresult = Label.fresh () in
-                                        addToGraph labcopyresult (Embinop (Mmov, r, Register.result, labunstack));
+                                        addToGraph labcopyresult (Embinop (Mmov, Register.result, r, labunstack));
 
                                         let labcall = Label.fresh () in
                                         addToGraph labcall (Ecall (f, nregs, labcopyresult));
@@ -106,7 +105,7 @@ let fct (f: Rtltree.deffun) =
     let labelRet = Label.fresh () in
     addToGraph labelRet Ereturn;
     let labelDelFrame = Label.fresh () in
-    addToGraph labelDelFrame (Edelete_frame labelDelFrame);
+    addToGraph labelDelFrame (Edelete_frame labelRet);
     let rec restoresCalleeReg regList lNReg = 
         match (regList, lNReg) with
         |([], []) -> labelDelFrame
