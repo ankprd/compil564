@@ -14,6 +14,36 @@ let instr curLabel curInstr =
     |Rtltree.Emubranch (b, r, l1, l2) -> addToGraph curLabel (Emubranch (b, r, l1, l2))
     |Rtltree.Embbranch (b, r1, r2, l1, l2) -> addToGraph curLabel (Embbranch (b, r1, r2, l1, l2))
     |Rtltree.Egoto l -> addToGraph curLabel (Egoto l)
+    | Rtltree.Ecall (r, f, rl, l) -> print_string "Rtltree.Ecall\n";
+                                     let nregs = min (List.length Register.parameters) (List.length rl) in
+                                     let nstck = max ((List.length rl) - (List.length Register.parameters))  0 in
+                                     if nstck = 0 then
+                                     begin
+                                        print_string "Lorsque rien sur la stack\n";
+                                        let labcopyresult = Label.fresh () in
+                                        addToGraph labcopyresult (Embinop (Mmov, r, Register.result, l));
+
+                                        print_string "Copié dans le résultat !\n";
+                                        let labcall = Label.fresh () in
+                                        addToGraph labcall (Ecall (f, nregs, labcopyresult));
+                                        
+                                        print_string "Appelé la fonction !\n";
+                                        
+                                        let lablast = ref labcall in
+
+                                        let rec addMov regl paraml = match regl, paraml with
+                                                                    | [], []         -> ()
+                                                                    | [], l          -> ()
+                                                                    | l, []          -> failwith "impossible here : nstck = 0"
+                                                                    | r::rll, p::pll -> let labcopy = Label.fresh () in
+                                                                                          addToGraph labcopy (Embinop (Mmov, r, p, !lablast));
+                                                                                          lablast := labcopy;
+                                                                                          addMov rll pll in
+                                        addMov rl Register.parameters;
+                                        print_string "Added !\n";
+                                     end
+                                   else
+                                   failwith "Not yet"
     |_ -> failwith "TODO instr"
 
 let fct (f: Rtltree.deffun) = 
@@ -46,6 +76,10 @@ let fct (f: Rtltree.deffun) =
     addToGraph labelBeginFct (Ealloc_frame labelBeforeCalleeSaving);
 
     Label.M.iter instr f.Rtltree.fun_body; 
+
+    (*Instruction de sortie de la fct*)
+    let labelRet = Label.fresh () in
+    addToGraph labelRet Ereturn in
 
     addToGraph f.Rtltree.fun_exit Ereturn;
     {
