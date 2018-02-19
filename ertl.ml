@@ -43,8 +43,36 @@ let instr curLabel curInstr =
                                         print_string "Added !\n";
                                      end
                                    else
-                                   failwith "Not yet"
-    |_ -> failwith "TODO instr"
+                                   begin
+                                        let labunstack = Label.fresh () in
+
+                                        addToGraph labunstack (Emunop (Maddi (Int32.of_int (8*nstck)), Register.rsp, l));
+
+                                        let labcopyresult = Label.fresh () in
+                                        addToGraph labcopyresult (Embinop (Mmov, r, Register.result, labunstack));
+
+                                        let labcall = Label.fresh () in
+                                        addToGraph labcall (Ecall (f, nregs, labcopyresult));
+
+                                        let lablast = ref labcall in
+
+                                        let rec addMov regl paraml = match regl, paraml with
+                                                                    | [], []         -> failwith "no way"
+                                                                    | [], l          -> failwith "impossible here : nstck > 0"
+                                                                    | l, []          -> l
+                                                                    | r::rll, p::pll -> let labcopy = Label.fresh () in
+                                                                                          addToGraph labcopy (Embinop (Mmov, r, p, !lablast));
+                                                                                          lablast := labcopy;
+                                                                                          addMov rll pll; in
+                                        let remainingr = addMov rl Register.parameters in
+
+                                        let rec pushThem regl = match regl with
+                                                                    | []     -> ()
+                                                                    | r::rll -> let labpush = Label.fresh () in
+                                                                                addToGraph labpush (Epush_param (r, !lablast));
+                                                                                lablast := labpush; in
+                                        pushThem remainingr
+                                   end
 
 let fct (f: Rtltree.deffun) = 
     graphERTL := (Label.M.empty : instr Label.M.t);
