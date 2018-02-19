@@ -19,15 +19,11 @@ let instr curLabel curInstr =
                                      let nstck = max ((List.length rl) - (List.length Register.parameters))  0 in
                                      if nstck = 0 then
                                      begin
-                                        print_string "Lorsque rien sur la stack\n";
                                         let labcopyresult = Label.fresh () in
                                         addToGraph labcopyresult (Embinop (Mmov, r, Register.result, l));
 
-                                        print_string "Copié dans le résultat !\n";
                                         let labcall = Label.fresh () in
                                         addToGraph labcall (Ecall (f, nregs, labcopyresult));
-                                        
-                                        print_string "Appelé la fonction !\n";
                                         
                                         let lablast = ref labcall in
 
