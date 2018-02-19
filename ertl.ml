@@ -78,8 +78,10 @@ let fct (f: Rtltree.deffun) =
     Label.M.iter instr f.Rtltree.fun_body; 
 
     (*Instruction de sortie de la fct*)
-    let labelRet = Label.fresh () in
-    addToGraph labelRet Ereturn in
+    (*let labelRet = Label.fresh () in
+    addToGraph labelRet Ereturn;
+    let labelDelFrame = Label.fresh () in
+    addToGraph labelDelFrame (Edelete_frame labelDelFrame)*)
 
     addToGraph f.Rtltree.fun_exit Ereturn;
     {
