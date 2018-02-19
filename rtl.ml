@@ -26,9 +26,6 @@ let indexInList l e =
 		| x::q -> if x = e then i else aux (i+1) q in
 	aux 0 l
 
-(* Construit le node "mov $0, #regname" *)
-let init0 typ name = {Ttree.expr_typ = typ; Ttree.expr_node = Ttree.Eassign_local (name, {Ttree.expr_typ = typ; Ttree.expr_node = Econst (Int32.of_int 0)})}
-
 let ptreeOp2Mbinop op = match op with
 	| Ptree.Badd -> Ops.Madd
 	| Ptree.Bsub -> Ops.Msub
@@ -130,10 +127,9 @@ let rec condition e truel falsel =
 		| Ttree.Sblock (decvarl, stmtl) -> (let rec populate l = (match l with
     											| [] -> []
     											| x::ll -> let nreg = Register.fresh () in Hashtbl.add locenv x nreg; (nreg)::(populate ll)) in
-    									   let regs = populate decvarl in
+    									   let _ = populate decvarl in
     									   let l1 = List.fold_right (fun stm labelnext -> stmt stm labelnext retr exitl) stmtl destl in
-    									   let initl = List.fold_left2 (fun labnext decv reg  -> expr (init0 (fst decv) (snd decv)) reg labnext) l1 decvarl regs in
-    									   List.iter  (fun v -> Hashtbl.remove locenv v) decvarl; initl)
+    									   List.iter  (fun v -> Hashtbl.remove locenv v) decvarl; l1)
 
 		(* FIXME: utiliser ta fonction condition qui fait mieux le taf (même si avec ça, ça fonctionne) ! *)
 		| Ttree.Sif (e, strue, sfalse)  -> let lfalse = stmt sfalse destl retr exitl and ltrue = stmt strue destl retr exitl in

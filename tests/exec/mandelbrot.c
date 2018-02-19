@@ -48,7 +48,6 @@ int run(int steps) {
   while (i < steps) {
     int y, j;
     y = add(ymin, mul(of_int(i), deltay));
-    j;
     j = 0;
     while (j < 2 * steps) {
       int x;
@@ -62,6 +61,7 @@ int run(int steps) {
     putchar(10);
     i = i+1;
   }
+  return 0;
 }
 
 int main() {
