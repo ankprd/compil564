@@ -52,17 +52,6 @@ let declareVar addToEnv ((ptype, nom): Ptree.decl_var) =
       )
       with Not_found -> raise (Error (String.concat "" ["Undeclared structure : "; s.Ptree.id]))(*la structure n'existe pas*)
 
-(*let declareFct (typF, (nomF : Ptree.ident)) =
-  match typF with 
-  | Ptree.Tint -> Hashtbl.add environnementFcts nomF.Ptree.id Ttree.Tint; (Ttree.Tint, nomF.Ptree.id) (*exception su double declaration ?*)
-  | Ptree.Tstructp s -> 
-      try(
-        let typeF = Hashtbl.find declaredStruct s.Ptree.id in
-        Hashtbl.add environnementFcts nomF.Ptree.id (Tstructp typeF);
-        (Tstructp typeF, nomF.Ptree.id)
-      )  
-      with Not_found -> raise (Error ((String.concat "" ["Undeclared structure : "; s.Ptree.id])))
-*)
 let declareStruct ((nom, listeVar) : Ptree.decl_struct) = 
   try
     (
@@ -73,7 +62,7 @@ let declareStruct ((nom, listeVar) : Ptree.decl_struct) =
     let fields = Hashtbl.create 2 in
     let listeF = List.map (declareVar false) listeVar in
     let ordered = ref [] in
-    let ajToField (typeF, nomF) = Hashtbl.add fields nomF {field_name = nomF; field_typ = typeF}; ordered := (nomF::!ordered) in
+    let ajToField (typeF, nomF) = try(let _ = Hashtbl.find fields nomF in raise (Error "Two or more fields share the same name !")) with Not_found -> Hashtbl.add fields nomF {field_name = nomF; field_typ = typeF} in
     List.iter ajToField listeF;
 
     Hashtbl.add declaredStructs nom.Ptree.id {str_name = nom.Ptree.id; str_fields = fields; str_ordered_fields = List.rev !ordered}
