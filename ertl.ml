@@ -46,13 +46,13 @@ let fct (f: Rtltree.deffun) =
     addToGraph labelBeginFct (Ealloc_frame labelBeforeCalleeSaving);
 
     Label.M.iter instr f.Rtltree.fun_body; 
-    
+
     addToGraph f.Rtltree.fun_exit Ereturn;
     {
         fun_name = f.Rtltree.fun_name;
         fun_formals = List.length f.Rtltree.fun_formals; (* nb total d'arguments *)
         fun_locals = f.Rtltree.fun_locals;
-        fun_entry = f.Rtltree.fun_entry;
+        fun_entry = labelBeginFct;
         fun_body = !graphERTL;
     }
 
