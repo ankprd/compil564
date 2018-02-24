@@ -3,6 +3,7 @@
 
 open Format
 open Lexing
+open Liveness
 
 let () = Printexc.record_backtrace true
 
