@@ -70,8 +70,10 @@ let instr curLabel curInstr = match curInstr with
                                                                     | []     -> ()
                                                                     | r::rll -> let labpush = Label.fresh () in
                                                                                 addToGraph labpush (Epush_param (r, !lablast));
-                                                                                lablast := labpush; in
-                                        pushThem remainingr
+                                                                                lablast := labpush;
+                                                                                pushThem rll; in
+                                        pushThem remainingr;
+                                        addToGraph curLabel (Egoto !lablast);
                                    end
 
 let fct (f: Rtltree.deffun) = 
