@@ -48,11 +48,8 @@ let label_print_list = Pp.print_list Pp.comma Label.print Format.std_formatter
 let print_live_info lbl liveinfo =
   Label.print Format.std_formatter lbl; print_string ": "; Ertltree.print_instr Format.std_formatter liveinfo.instr;
                 print_string "  d={"; register_print_set liveinfo.defs; print_string "} u={";register_print_set liveinfo.uses;
+                print_string "} i={"; register_print_set liveinfo.ins; print_string "} o={"; register_print_set liveinfo.outs;
                 print_string "}\n"
-
-(*let print_live (lmap : live_info Label.map) (entry : Ertltree.label) = 
-  Label.M.iter (fun lbl liveinfo -> print_live_info lbl liveinfo) lmap
-*)
 
 let print_live funcname (lmap : live_info Label.map) (entry : Ertltree.label) = 
   print_string ("=== LIVENESS(" ^ funcname ^ ") =================================================\n");
