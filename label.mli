@@ -16,6 +16,8 @@ type set = S.t
   (** ensembles dont les éléments sont des étiquettes *)
 
 val print : Format.formatter -> t -> unit
+
+val print_set: Format.formatter -> set -> unit
   (** fonction d'impression *)
 
 
