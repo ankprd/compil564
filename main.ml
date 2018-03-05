@@ -11,6 +11,7 @@ let parse_only = ref false
 let type_only = ref false
 let interp_rtl = ref false
 let interp_ertl = ref false
+let interp_ltl = ref false
 let doliveness = ref false
 let debug = ref false
 
@@ -27,6 +28,8 @@ let options =
      "  interprets RTL (and does not compile)";
    "--interp-ertl", Arg.Set interp_ertl,
      "  interprets ERTL (and does not compile)";
+  "--interp-ltl", Arg.Set interp_ltl,
+     "  interprets LTL (and does not compile)";
    "--liveness", Arg.Set doliveness,
      "  displays the result of liveness analysis (and does not compile)";
    "--debug", Arg.Set debug,
@@ -88,9 +91,9 @@ let () =
     if !parse_only then exit 0;
     let p = Typing.program p in
     if !type_only then exit 0;
+
     let p = Rtl.program p in
     if debug then Rtltree.print_file std_formatter p;
-    
     if !interp_rtl then begin ignore (Rtlinterp.program p); exit 0 end;
     let p = Ertl.program p in
     if debug then Ertltree.print_file std_formatter p;
@@ -98,7 +101,16 @@ let () =
     if !interp_ertl then begin ignore (Ertlinterp.program p); exit 0 end;
     (* ... *)
 
-    if !doliveness then begin List.iter (fun f -> let lv = Liveness.liveness f.Ertltree.fun_body in (print_live f.Ertltree.fun_name lv f.Ertltree.fun_entry); print_string "\n") (p.funs); exit 0; end
+    if !doliveness then
+    begin 
+      List.iter (fun f -> let lv = Liveness.liveness f.Ertltree.fun_body in (print_live f.Ertltree.fun_name lv f.Ertltree.fun_entry); print_string "\n") (p.funs);
+      exit 0
+    end;
+  
+    let p = Ltl.program p in
+    if debug then Ltltree.print_file std_formatter p;
+    if !interp_ltl then begin ignore (Ltlinterp.program p); exit 0 end;
+
   with
     | Lexer.Lexical_error c ->
 	localisation (Lexing.lexeme_start_p buf);
