@@ -9,97 +9,104 @@ open Ltltree
 type color = Ltltree.operand
 type coloring = color Register.map
 
-let addRegToTodo reg arcsReg oldTodo =
-    let setRegPoss =  Set.fold (Set.remove) arcsReg.intfs Register.allocatable in
-    Map.add reg setRegPoss oldTodo
+let addRegToTodo reg (arcsReg : Interfgraph.arcs) oldTodo =
+    let setRegPoss =  Register.S.fold (Register.S.remove) arcsReg.Interfgraph.intfs Register.allocatable in
+    Register.M.add reg setRegPoss oldTodo
 
 let color graph = (*renvoie (coloration, nbCouleurs)*) (*Ca serait bien de rajouter plein de assert quand on sait au une map a qu un element par ex*)
-    let todo = Map.fold addRegToTodo graph Register.M.empty in (*todo est une Map de key = Register et de value = set de RegisterAllocatable*)
+    let todo = Register.M.fold addRegToTodo graph Register.M.empty in (*todo est une Map de key = Register et de value = set de RegisterAllocatable*)
     let curColo = ref Register.M.empty in (*Map de Register -> Ltltree.operand (= reg ou spilled)*)
     let nbSpilled = ref 0 in (*Spilled registers are numbered from 0 to nbSpilled - 1*)
 
     let rec oneColorOnePref curTodo =
         let isOneColOnePref reg colPoss = 
-            let arcsReg = Map.find reg graph in
-            (Set.cardinal colPoss = 1) &&
-            (Set.subset colPoss arcReg.prefs) in
-        let regPoss = Map.filter isOneColOnePref curTodo in
-        if Map.is_empty regPoss then oneColor curTodo
+            let arcsReg = Register.M.find reg graph in
+            (Register.S.cardinal colPoss = 1) &&
+            (Register.S.subset colPoss arcsReg.Interfgraph.prefs) in
+        let regPoss = Register.M.filter isOneColOnePref curTodo in
+        if Register.M.is_empty regPoss then oneColor curTodo
         else ( (*on a trouve au moins un reg qui a qu'une couleur qui en plus est dans ses prefs*)
-            let (regChoisi, couleursPoss) = Map.min_binding regPoss 
-            let couleur = Set.min_elt couleursPoss in
-            let delCouleur oldColsPoss = Map.remove couleur oldColsPoss in
-            curColo := Map.add regChoisi (Reg couleur) !curColo
-            let newTodo1 = Map.map delCouleur oldTodo in
-            let newTodo2 = Map.remove regChoisi newTodo1
+            let (regChoisi, couleursPoss) = Register.M.min_binding regPoss in
+            let couleur = Register.S.min_elt couleursPoss in
+            let delCouleur (oldColsPoss : Register.S.t) = Register.S.remove couleur oldColsPoss in
+            curColo := Register.M.add regChoisi (Reg couleur) !curColo;
+            let newTodo1 = Register.M.map delCouleur curTodo in
+            let newTodo2 = Register.M.remove regChoisi newTodo1 in
             oneColorOnePref newTodo2
         )
 
     and oneColor curTodo = 
-        let isOneColor reg colPoss = Set.cardinal colPoss = 1 in
-        let regPoss = Map.filter isOneColor curTodo in
-        if Map.is_empty regPoss then prefKnownCol curTodo
+        let isOneColor reg colPoss = Register.S.cardinal colPoss = 1 in
+        let regPoss = Register.M.filter isOneColor curTodo in
+        if Register.M.is_empty regPoss then prefKnownCol curTodo
         else ( (*on a trouve au moins un reg qui a qu'une couleur*)
-            let (regChoisi, couleursPoss) = Map.min_binding regPoss 
-            let couleur = Set.min_elt couleursPoss in
-            let delCouleur oldColsPoss = Map.remove couleur oldColsPoss in
-            curColo := Map.add regChoisi (Reg couleur) !curColo
-            let newTodo1 = Map.map delCouleur oldTodo in
-            let newTodo2 = Map.remove regChoisi newTodo1
+            let (regChoisi, couleursPoss) = Register.M.min_binding regPoss in
+            let couleur = Register.S.min_elt couleursPoss in
+            let delCouleur oldColsPoss = Register.S.remove couleur oldColsPoss in
+            curColo := Register.M.add regChoisi (Reg couleur) !curColo;
+            let newTodo1 = Register.M.map delCouleur curTodo in
+            let newTodo2 = Register.M.remove regChoisi newTodo1 in
             oneColorOnePref newTodo2
         )
     
     and prefKnownCol curTodo = 
         let getColorsPrefs reg = 
-            let addsColorPrefs regi setCouleurs = 
-                if not (Register.is_pseudo regi) then Set.add (Reg regi) setCouleurs
-                else (
-                    try Set.add (Map.find regi !curColo) setCouleurs with Not_found -> setCouleurs
+            let addsColorPrefs regi (setCouleurs : Register.S.t) = 
+                if not (Register.is_pseudo regi) then Register.S.add regi setCouleurs
+                else ( (*Et si la prefs a ete spilled, on veut etre spilled pareil ? -> pour l instant si la pref a ete spilled, on fait genre elle est pas coloree donc bof*)
+                    try (
+                        match (Register.M.find regi !curColo) with 
+                        |Reg r -> Register.S.add r setCouleurs
+                        |Spilled n -> setCouleurs
+                       (* Register.S.add (Register.M.find regi !curColo) setCouleurs *)
+                    )
+                    with Not_found -> setCouleurs
                 )
+            in
             (*let isColored regi = 
                 not (Register.is_pseudo regi) ||
-                (try Map.find regi !curColo; true with Not_found -> false) in*)
-            let arcsReg = Map.find reg graph in
-            Set.fold getColorsPrefs arcsReg.prefs Set.empty
+                (try Register.M.find regi !curColo; true with Not_found -> false) in*)
+            let arcsReg = Register.M.find reg graph in
+            Register.S.fold addsColorPrefs arcsReg.Interfgraph.prefs Register.S.empty
         in
-        let isPrefKnownCol reg colPoss = not (Set.is_empty (Set.inter (getColorsPrefs reg) colPoss)) in
-        let regPoss = Map.filter isPrefKnownCol curTodo in
-        if Map.is_empty regPoss then colorPoss curTodo
+        let isPrefKnownCol reg colPoss = not (Register.S.is_empty (Register.S.inter (getColorsPrefs reg) colPoss)) in
+        let regPoss = Register.M.filter isPrefKnownCol curTodo in
+        if Register.M.is_empty regPoss then colorPoss curTodo
         else ( (*on a trouve au moins un reg qui a une pref coloree*)
-            let (regChoisi, couleursPoss) = Map.min_binding regPoss in
-            let setCompatibleColors = Set.inter (getColorsPrefs reg) couleursPoss in
-            let Reg couleur = Set.min_elt setCompatibleColors in
-            let delCouleur oldColsPoss = Map.remove couleur oldColsPoss in
-            curColo := Map.add regChoisi (Reg couleur) !curColo;
-            let newTodo1 = Map.map delCouleur oldTodo in
-            let newTodo2 = Map.remove regChoisi newTodo1
+            let (regChoisi, couleursPoss) = Register.M.min_binding regPoss in
+            let setCompatibleColors = Register.S.inter (getColorsPrefs regChoisi) couleursPoss in
+            let couleur = Register.S.min_elt setCompatibleColors in
+            let delCouleur oldColsPoss = Register.S.remove couleur oldColsPoss in
+            curColo := Register.M.add regChoisi (Reg couleur) !curColo;
+            let newTodo1 = Register.M.map delCouleur curTodo in
+            let newTodo2 = Register.M.remove regChoisi newTodo1 in
             oneColorOnePref newTodo2
         )
 
     and colorPoss curTodo =
-        let isColorPoss reg colPoss= not Set.is_empty colPoss in
-        let regPoss = Map.filter isColorPoss curTodo in
-        if Map.is_empty regPoss then onlySpill curTodo
+        let isColorPoss reg colPoss= not (Register.S.is_empty colPoss) in
+        let regPoss = Register.M.filter isColorPoss curTodo in
+        if Register.M.is_empty regPoss then onlySpill curTodo
         else ( (*on a trouve au moins un reg qui a au moins une couleur poss*)
-            let (regChoisi, couleursPoss) = Map.min_binding regPoss in
-            let couleur = Set.min_elt couleursPoss in
-            let delCouleur oldColsPoss = Map.remove couleur oldColsPoss in
-            curColo := Map.add regChoisi (Reg couleur) !curColo;
-            let newTodo1 = Map.map delCouleur oldTodo in
-            let newTodo2 = Map.remove regChoisi newTodo1
+            let (regChoisi, couleursPoss) = Register.M.min_binding regPoss in
+            let couleur = Register.S.min_elt couleursPoss in
+            let delCouleur oldColsPoss = Register.S.remove couleur oldColsPoss in
+            curColo := Register.M.add regChoisi (Reg couleur) !curColo;
+            let newTodo1 = Register.M.map delCouleur curTodo in
+            let newTodo2 = Register.M.remove regChoisi newTodo1 in
             oneColorOnePref newTodo2
         )
 
     and onlySpill curTodo = 
         try (
-            let (regChoisi, couleursPoss) = Map.choose curTodo in
-            curColo := Map.add regChoisi (Spilled !nbSpilled) !curColo;
+            let (regChoisi, couleursPoss) = Register.M.choose curTodo in
+            curColo := Register.M.add regChoisi (Spilled !nbSpilled) !curColo;
             nbSpilled := !nbSpilled + 1;
-            let newTodo = Map.remove regChoisi curTodo in
+            let newTodo = Register.M.remove regChoisi curTodo in
             oneColorOnePref newTodo
         )
         with Not_found -> () (*todo est vide, on a tout colore*)
-        
+    in
     oneColorOnePref todo;
     (!curColo, !nbSpilled)
     
