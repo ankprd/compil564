@@ -1,13 +1,8 @@
+int fact(int n)
+{
+  return fact(n-1);
+}
+
 int main() {
-  if(1)
-  {
-    int x;
-    x = 3;
-    return x+1;
-  }
-  else
-  {
-    putchar(65);
-    return 0;
-  }
+  return 42;
 }
