@@ -21,6 +21,10 @@ type instr =
 
 *)
 
+let physical r = match r with
+    | Reg _ -> true
+    | Spilled _ -> false
+
 (* TODO: reprendre au cas par cas les erreurs qui seront relevées lors des tests *)
 let instr c frame_size curLab curInstr = match curInstr with
   | Ertltree.Econst (n, r, l)  -> addToGraph curLab (Econst (n, lookup c r, l))
@@ -33,6 +37,7 @@ let instr c frame_size curLab curInstr = match curInstr with
   | Ertltree.Edelete_frame l   -> let lpop = Label.fresh () in
                                   addToGraph lpop (Epop (Register.rbp, l));
                                   addToGraph lmov (Embinop (Ops.Mmov, Register.rbp, Register.rsp, lpop))
+  | Ertltree.Eget_param (n, r, l) -> addToGraph curLab (Eload (Register.rbp, n, lookup c r, l))
   | Ertltree.Ecall (f, n, l)   -> addToGraph curLab (Ecall (f, l))
   | Ertltree.Emburanch (ubr, r, l1, l2)       -> addToGraph curLab (Emubranch (ubr, lookup c r, l1, l2))
   | Ertltree.Embbranch (mbbr, r1, r2, l1, l2) -> addToGraph curLab (Embbranch (mbbr, lookup c r1, lookup c r2, l1, l2))
