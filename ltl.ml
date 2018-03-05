@@ -44,11 +44,10 @@ let instr c frame_size curLab curInstr = match curInstr with
                                                 addToGraph curLab (Egoto l)
                                               else
                                                 addToGraph curLab (Embinop (Ops.Mmov, c1, c2, l)))
-  | Ertltree.Embinop (Ops.Mmul, r1, r2, l) -> let c1 = lookup c r1 and let c2 = lookup c r2 in 
+  | Ertltree.Embinop (Ops.Mmul, r1, r2, l) -> let c1 = lookup c r1 and c2 = lookup c r2 in 
                                               (match c2 with
                                                  | Reg _ -> addToGraph curLab (Embinop (Ops.Mmul, c1, c2, l))
                                                  | _     -> failwith "TODO: bad mul")
-  | 
   | _ -> failwith "not yet implemented"
 
 
