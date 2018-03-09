@@ -36,8 +36,8 @@ let options =
      "  displays the result of liveness analysis (and does not compile)";
    "--interfgraph", Arg.Set graphinterf,
      "  displays the interference graph (and does not compile)";
-   (*"--coloration", Arg.Set coloration,
-     "  displays the coloration (and does not compile)";*)
+   "--coloration", Arg.Set coloration,
+     "  displays the coloration (and does not compile)";
    "--debug", Arg.Set debug,
      "  debug mode";
    ]
@@ -109,7 +109,7 @@ let () =
 
     if !doliveness then
     begin 
-      List.iter (fun f -> let lv = Liveness.liveness f.Ertltree.fun_body in (print_live f.Ertltree.fun_name lv f.Ertltree.fun_entry); print_string "\n") (p.funs);
+      List.iter (fun f -> let lv = Liveness.liveness f.Ertltree.fun_body in (print_live f.Ertltree.fun_name lv f.Ertltree.fun_entry); print_string "\n") (p.Ertltree.funs);
       exit 0
     end;
 
@@ -118,23 +118,23 @@ let () =
       List.iter (fun f -> 
         let lv = Liveness.liveness f.Ertltree.fun_body in 
         let gI = Interfgraph.make lv in
-        Interfgraph.print gI; print_string "\n") (p.funs);
+        Interfgraph.print gI; print_string "\n") (p.Ertltree.funs);
       exit 0
     end;
 
-    (*if !coloration then
+    if !coloration then
     begin
       List.iter (fun f -> 
         let lv = Liveness.liveness f.Ertltree.fun_body in 
         let gI = Interfgraph.make lv in
-        let colo = Coloration.color gI in
-        Colocation.print_color colo; print_string "\n") (p.funs);
+        let (colo, n) = Coloration.color gI in
+        Coloration.print colo; print_string "\n") (p.funs);
       exit 0
     end;
   
     let p = Ltl.program p in
     if debug then Ltltree.print_file std_formatter p;
-    if !interp_ltl then begin ignore (Ltlinterp.program p); exit 0 end;*)
+    if !interp_ltl then begin ignore (Ltlinterp.program p); exit 0 end;
 
   with
     | Lexer.Lexical_error c ->

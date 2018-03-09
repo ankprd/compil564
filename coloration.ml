@@ -5,17 +5,17 @@ type igraph = arcs Register.map
 *)
 
 open Ltltree
+open Format
 
 type color = Ltltree.operand
 type coloring = color Register.map
 
-(*open Format
-    let print_color fmt = function
-    | Reg hr    -> fprintf fmt "%a" Register.print hr
-    | Spilled n -> fprintf fmt "stack %d" n
-    let print cm =
-    RM.iter
-        (fun r cr -> printf "%a -> %a@\n" Register.print r print_color cr) cm*)
+let print_color fmt = function
+| Reg hr    -> fprintf fmt "%a" Register.print hr
+| Spilled n -> fprintf fmt "stack %d" n
+let print cm =
+Register.M.iter
+    (fun r cr -> printf "%a -> %a@\n" Register.print r print_color cr) cm
 
 let addRegToTodo reg (arcsReg : Interfgraph.arcs) oldTodo =
     let setRegPoss =  Register.S.fold (Register.S.remove) arcsReg.Interfgraph.intfs Register.allocatable in
