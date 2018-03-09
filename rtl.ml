@@ -105,9 +105,9 @@ let rec condition e truel falsel =
 											 	) in
 											 (*Register.print Format.std_formatter  regAddrMem; print_endline "where the struct is ";
 											 Register.print Format.std_formatter  regValExpr; print_endline "where the expr res is ";*)
-											 let lassDestr = generate(Embinop (Ops.Mmov, regValExpr, destr, destl)) in
-											 let laccField = generate (Estore (regValExpr, regAddrMem, idField * 8, lassDestr)) in
-											 let lCalcAddr = expr e1 regAddrMem laccField in
+											 let laccField = generate (Estore (regValExpr, regAddrMem, idField * 8, destl)) in
+                                             let lassDestr = generate(Embinop (Ops.Mmov, regValExpr, destr, laccField)) in
+											 let lCalcAddr = expr e1 regAddrMem lassDestr in
 											 expr e2 regValExpr lCalcAddr
 		(* C'est très simple puisque on sait que tous les champs de structure font 8 bytes *)
 		| Ttree.Esizeof s -> generate (Econst (Int32.of_int (8 * (List.length s.Ttree.str_ordered_fields)), destr, destl))
