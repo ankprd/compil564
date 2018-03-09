@@ -33,16 +33,19 @@ let is_physical r = match r with
 let instr c frame_size curLab curInstr = match curInstr with
   | Ertltree.Econst (n, r, l)  -> addToGraph curLab (Econst (n, lookup c r, l))
   | Ertltree.Egoto l           -> addToGraph curLab (Egoto l)
-  | Ertltree.Ealloc_frame l    -> let ladd = Label.fresh () in
-                                  addToGraph ladd (Emunop ((Ops.Maddi (Int32.of_int frame_size)), Reg Register.rsp, l));
-                                  let lmov = Label.fresh () in
-                                  addToGraph lmov (Embinop (Ops.Mmov, Reg Register.rsp, Reg Register.rbp, ladd));
-                                  addToGraph curLab (Epush (Reg Register.rbp, lmov))
+
+  (* FIXME: ok je supprime le add $0, %rsp mais est-ce qu'on peut pas tout enlever à part le push de %rbp qui est callee-saved ? *)
+  | Ertltree.Ealloc_frame l    ->   let ladd = Label.fresh () in
+                                    addToGraph ladd (Emunop ((Ops.Maddi (Int32.of_int (8*frame_size))), Reg Register.rsp, l));
+                                    let lmov = Label.fresh () in
+                                    addToGraph lmov (Embinop (Ops.Mmov, Reg Register.rsp, Reg Register.rbp, ladd));
+                                    addToGraph curLab (Epush (Reg Register.rbp, lmov))
+                                  
   | Ertltree.Edelete_frame l   -> let lpop = Label.fresh () in
                                   addToGraph lpop (Epop (Register.rbp, l));
                                   addToGraph curLab (Embinop (Ops.Mmov, Reg Register.rbp, Reg Register.rsp, lpop))
                                   (*Eload of register * int * register * label*)
-  | Ertltree.Eget_param (n, r, l) -> addToGraph curLab (Eload (Register.rbp, n, (match lookup c r with Reg k -> k | _ -> failwith "nope"), l))
+  | Ertltree.Eget_param (n, r, l) -> addToGraph curLab (Eload (Register.rbp, 8*n, (match lookup c r with Reg k -> k | _ -> failwith "nope"), l))
   | Ertltree.Ecall (f, n, l)   -> addToGraph curLab (Ecall (f, l))
   | Ertltree.Emubranch (ubr, r, l1, l2)       -> addToGraph curLab (Emubranch (ubr, lookup c r, l1, l2))
   | Ertltree.Embbranch (mbbr, r1, r2, l1, l2) -> addToGraph curLab (Embbranch (mbbr, lookup c r1, lookup c r2, l1, l2))
@@ -66,6 +69,10 @@ let instr c frame_size curLab curInstr = match curInstr with
                                       (match c1, c2 with
                                         | Reg rr1, Reg rr2 -> addToGraph curLab (Estore (rr1, rr2, n, l))
                                         | _            -> failwith "not yet implemented in store !")
+  | Ertltree.Eload (r1, n, r2, l) -> let c1 = lookup c r1 and c2 = lookup c r2 in 
+                                      (match c1, c2 with
+                                        | Reg rr1, Reg rr2 -> addToGraph curLab (Eload (rr1, n, rr2, l))
+                                        | _            -> failwith "not yet implemented in load !")
   | Ertltree.Ereturn -> addToGraph curLab (Ereturn)
 
 
