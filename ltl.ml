@@ -3,7 +3,11 @@ open Ltltree
 let graphLTL = ref (Label.M.empty : instr Label.M.t)
 
 let lookup (c : Coloration.coloring) (r : Register.t) =
-  if Register.is_hw r then Reg r else Register.M.find r c
+  if Register.is_hw r then 
+    Reg r 
+  else 
+    try Register.M.find r c
+  with Not_found -> failwith ("Register has no coloring : cannot be looked up !")
 
 let addToGraph lab instru = graphLTL := Label.M.add lab instru !graphLTL
 
@@ -21,7 +25,7 @@ type instr =
 
 *)
 
-let physical r = match r with
+let is_physical r = match r with
     | Reg _ -> true
     | Spilled _ -> false
 
