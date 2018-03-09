@@ -9,37 +9,47 @@ let print ig =
 
 let addPref regi curIgraphi prefi = 
     let adds reg pref curIgraph = 
-        match Register.M.find_opt reg curIgraph with
+        let found = 
+            try Some (Register.M.find reg curIgraph) with Not_found -> None in 
+        match found with
         |None -> Register.M.add reg {prefs = Register.S.singleton pref; intfs = Register.S.empty} curIgraph
-        |Some {prefs = curP; intfs = curI} -> (
-            match Register.S.find_opt pref intfs with
+        |Some {prefs = curP; intfs = curI} ->(
+            let foundPref = 
+                try Some (Register.S.find pref curI) with Not_found -> None
+            in
+            match foundPref with
             |None -> Register.M.add reg {prefs = Register.S.add pref curP; intfs = curI} curIgraph
             |_ -> curIgraph
             )
     in
-    adds regi prefi (adds prefi regi curIgraph)
+    adds regi prefi (adds prefi regi curIgraphi)
     
 
 let addInter regi interfi curIgraphi = 
     let adds reg interf curIgraph =
-        match Register.M.find_opt reg curIgraph with
+        let found = 
+            try Some (Register.M.find reg curIgraph) with Not_found -> None in
+        match found with
         |None -> Register.M.add reg {prefs = Register.S.empty; intfs = Register.S.singleton interf} curIgraph
-        |Some {prefs = curP; intf = curI} -> Register.M.add reg {prefs = Register.S.remove interf curP; intfs = Register.S.add interf curI}
+        |Some {prefs = curP; intfs = curI} -> Register.M.add reg {prefs = Register.S.remove interf curP; intfs = Register.S.add interf curI} curIgraph
     in
-    adds regi interfi (adds interfi regi curIgraphi)
+    if regi = interfi then curIgraphi 
+    else adds regi interfi (adds interfi regi curIgraphi)
 
 
 let addIAndP setInterfs listePrefs reg curIgraph = 
     let graphInter = Register.S.fold (addInter reg) setInterfs curIgraph in
     List.fold_left (addPref reg) graphInter listePrefs
 
-let traiteInstr label liveInfo curIgraph =
+let traiteInstr (label : Label.t) liveInfo (curIgraph : arcs Register.M.t) : arcs Register.map =
     let (regInterfs, regPrefs) = 
         match liveInfo.Liveness.instr with
-        |Ertltree.Emunop (Ops.Mmov, reg, l) -> (Register.S.remove reg !liveInfo.Liveness.outs, [reg]) (*liste for prefs because one or 0 elements and easier to write that way*)
-        | _ -> (!liveInfo.Liveness.outs, [])
+        |Ertltree.Embinop (Ops.Mmov, regOr, regDest, l) -> (Register.S.remove regOr liveInfo.Liveness.outs, [regOr]) (*liste for prefs because one or 0 elements and easier to write that way*)
+        | _ -> (liveInfo.Liveness.outs, [])
     in
-    Register.S.fold (addIAndP regInterfs regPrefs) liveInfo.Liveness.defs
+    Register.S.fold (addIAndP regInterfs regPrefs) liveInfo.Liveness.defs curIgraph
 
 let make livGraph : igraph = 
-    Register.M.fold traiteInstr livGraph Register.M.empty 
+    let tmpT : Label.t->Liveness.live_info->arcs Register.map->arcs Register.map = traiteInstr in
+    let tmplivGraph : Liveness.live_info Label.map = livGraph in
+    Label.M.fold tmpT  tmplivGraph (Register.M.empty : igraph)

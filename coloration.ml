@@ -9,6 +9,14 @@ open Ltltree
 type color = Ltltree.operand
 type coloring = color Register.map
 
+(*open Format
+    let print_color fmt = function
+    | Reg hr    -> fprintf fmt "%a" Register.print hr
+    | Spilled n -> fprintf fmt "stack %d" n
+    let print cm =
+    RM.iter
+        (fun r cr -> printf "%a -> %a@\n" Register.print r print_color cr) cm*)
+
 let addRegToTodo reg (arcsReg : Interfgraph.arcs) oldTodo =
     let setRegPoss =  Register.S.fold (Register.S.remove) arcsReg.Interfgraph.intfs Register.allocatable in
     Register.M.add reg setRegPoss oldTodo
@@ -20,7 +28,7 @@ let color graph = (*renvoie (coloration, nbCouleurs)*) (*Ca serait bien de rajou
 
     let delCouleur regColore colADel keyReg (oldColsPoss : Register.S.t) = 
         let arcReg = Register.M.find keyReg graph in
-        if Register.S.mem regColore arcReg.Interfgraph.intfs then Register.S.remove couleur oldColsPoss 
+        if Register.S.mem regColore arcReg.Interfgraph.intfs then Register.S.remove colADel oldColsPoss 
         else oldColsPoss
     in
 
@@ -48,7 +56,7 @@ let color graph = (*renvoie (coloration, nbCouleurs)*) (*Ca serait bien de rajou
             let (regChoisi, couleursPoss) = Register.M.min_binding regPoss in
             let couleur = Register.S.min_elt couleursPoss in
             curColo := Register.M.add regChoisi (Reg couleur) !curColo;
-            let newTodo1 = Register.M.map (delCouleur regChoisi couleur) curTodo in
+            let newTodo1 = Register.M.mapi (delCouleur regChoisi couleur) curTodo in
             let newTodo2 = Register.M.remove regChoisi newTodo1 in
             oneColorOnePref newTodo2
         )
@@ -81,7 +89,7 @@ let color graph = (*renvoie (coloration, nbCouleurs)*) (*Ca serait bien de rajou
             let setCompatibleColors = Register.S.inter (getColorsPrefs regChoisi) couleursPoss in
             let couleur = Register.S.min_elt setCompatibleColors in
             curColo := Register.M.add regChoisi (Reg couleur) !curColo;
-            let newTodo1 = Register.M.map (delCouleur regChoisi couleur) curTodo in
+            let newTodo1 = Register.M.mapi (delCouleur regChoisi couleur) curTodo in
             let newTodo2 = Register.M.remove regChoisi newTodo1 in
             oneColorOnePref newTodo2
         )
@@ -94,7 +102,7 @@ let color graph = (*renvoie (coloration, nbCouleurs)*) (*Ca serait bien de rajou
             let (regChoisi, couleursPoss) = Register.M.min_binding regPoss in
             let couleur = Register.S.min_elt couleursPoss in
             curColo := Register.M.add regChoisi (Reg couleur) !curColo;
-            let newTodo1 = Register.M.map (delCouleur regChoisi couleur) curTodo in
+            let newTodo1 = Register.M.mapi (delCouleur regChoisi couleur) curTodo in
             let newTodo2 = Register.M.remove regChoisi newTodo1 in
             oneColorOnePref newTodo2
         )
