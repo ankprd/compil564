@@ -58,7 +58,15 @@ let instr c frame_size curLab curInstr = match curInstr with
                                               (match c2 with
                                                  | Reg _ -> addToGraph curLab (Embinop (Ops.Mmul, c1, c2, l))
                                                  | _     -> failwith "TODO: bad mul")
-  | _ -> failwith "not yet implemented"
+  | Ertltree.Embinop (op, r1, r2, l) -> let c1 = lookup c r1 and c2 = lookup c r2 in 
+                                              (match c2 with
+                                                 | Reg _ -> addToGraph curLab (Embinop (op, c1, c2, l))
+                                                 | _     -> failwith "TODO: bad xxx")
+  | Ertltree.Estore (r1, r2, n, l) -> let c1 = lookup c r1 and c2 = lookup c r2 in 
+                                      (match c1, c2 with
+                                        | Reg rr1, Reg rr2 -> addToGraph curLab (Estore (rr1, rr2, n, l))
+                                        | _            -> failwith "not yet implemented in store !")
+  | Ertltree.Ereturn -> addToGraph curLab (Ereturn)
 
 
 
