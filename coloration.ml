@@ -110,7 +110,7 @@ let color graph = (*renvoie (coloration, nbCouleurs)*) (*Ca serait bien de rajou
     and onlySpill curTodo = 
         try (
             let (regChoisi, couleursPoss) = Register.M.choose curTodo in
-            curColo := Register.M.add regChoisi (Spilled (8 * !nbSpilled)) !curColo;
+            curColo := Register.M.add regChoisi (Spilled (-8 * (1 + !nbSpilled))) !curColo;
             nbSpilled := !nbSpilled + 1;
             let newTodo = Register.M.remove regChoisi curTodo in
             oneColorOnePref newTodo
