@@ -36,7 +36,7 @@ let index b ofs =
   i
 
 let get m p ~ofs =
-  let b = try Hashtbl.find m.mem p with Not_found -> seg_fault () in
+  let b = try Hashtbl.find m.mem p with Not_found -> (print_string "Attention: p = "; print_int (Int64.to_int p); print_string "!\n"; seg_fault ()) in
   let i = index b ofs in
   b.(i)
 

@@ -47,9 +47,9 @@ let instr c frame_size curLab curInstr = match curInstr with
                                   (*Eload of register * int * register * label*)
   | Ertltree.Eget_param (n, r, l) -> let cr = lookup c r in 
                                      (match cr with
-                                        | Reg k         -> addToGraph curLab (Eload (Register.rbp, -16, k, l))
+                                        | Reg k         -> addToGraph curLab (Embinop (Mmov, Spilled n, Reg k, l))
                                         | Spilled k     -> (let lmov = Label.fresh () in
-                                                            failwith "well nope"
+                                                            failwith "todo: nope"
                                                             ))
   | Ertltree.Ecall (f, n, l)   -> addToGraph curLab (Ecall (f, l))
   | Ertltree.Emubranch (ubr, r, l1, l2)       -> addToGraph curLab (Emubranch (ubr, lookup c r, l1, l2))
