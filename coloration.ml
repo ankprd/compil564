@@ -18,7 +18,7 @@ Register.M.iter
     (fun r cr -> printf "%a -> %a@\n" Register.print r print_color cr) cm
 
 let addRegToTodo reg (arcsReg : Interfgraph.arcs) oldTodo =
-    if Register.is_hw then oldTodo
+    if Register.is_hw reg then oldTodo
     else (
     let setRegPoss =  Register.S.fold (Register.S.remove) arcsReg.Interfgraph.intfs Register.allocatable in
     Register.M.add reg setRegPoss oldTodo)
