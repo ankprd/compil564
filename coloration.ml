@@ -18,8 +18,10 @@ Register.M.iter
     (fun r cr -> printf "%a -> %a@\n" Register.print r print_color cr) cm
 
 let addRegToTodo reg (arcsReg : Interfgraph.arcs) oldTodo =
+    if Register.is_hw then oldTodo
+    else (
     let setRegPoss =  Register.S.fold (Register.S.remove) arcsReg.Interfgraph.intfs Register.allocatable in
-    Register.M.add reg setRegPoss oldTodo
+    Register.M.add reg setRegPoss oldTodo)
 
 let color graph = (*renvoie (coloration, nbCouleurs)*) (*Ca serait bien de rajouter plein de assert quand on sait au une map a qu un element par ex*)
     let todo = Register.M.fold addRegToTodo graph Register.M.empty in (*todo est une Map de key = Register et de value = set de RegisterAllocatable*)
