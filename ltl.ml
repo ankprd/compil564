@@ -36,7 +36,7 @@ let instr c frame_size curLab curInstr = match curInstr with
 
   (* FIXME: ok je supprime le add $0, %rsp mais est-ce qu'on peut pas tout enlever à part le push de %rbp qui est callee-saved ? *)
   | Ertltree.Ealloc_frame l    ->   let ladd = Label.fresh () in
-                                    addToGraph ladd (Emunop ((Ops.Maddi (Int32.of_int (8*frame_size))), Reg Register.rsp, l));
+                                    addToGraph ladd (Emunop ((Ops.Maddi (Int32.of_int (-8*frame_size))), Reg Register.rsp, l));
                                     let lmov = Label.fresh () in
                                     addToGraph lmov (Embinop (Ops.Mmov, Reg Register.rsp, Reg Register.rbp, ladd));
                                     addToGraph curLab (Epush (Reg Register.rbp, lmov))
@@ -51,7 +51,7 @@ let instr c frame_size curLab curInstr = match curInstr with
   | Ertltree.Embbranch (mbbr, r1, r2, l1, l2) -> addToGraph curLab (Embbranch (mbbr, lookup c r1, lookup c r2, l1, l2))
   | Ertltree.Emunop (op, r, l) -> addToGraph curLab (Emunop (op, lookup c r, l))
   | Ertltree.Epush_param (r, l) -> addToGraph curLab (Epush (lookup c r, l))
-  (* TODO: les binops avec les deux arguments en mémoire -> nope. Relancer mais en ayant mis LE PREMIER ARGUMENT en registre *)
+  (* TODO: les binops avec les deux arguments en mémoire -> nope. Relancer mais en ayant mis LE DEUXIÈME ARGUMENT en registre *)
   | Ertltree.Embinop (Ops.Mmov, r1, r2, l) -> let c1 = lookup c r1 and c2 = lookup c r2 in 
                                               (if c1 = c2 then 
                                                 addToGraph curLab (Egoto l)
@@ -60,7 +60,10 @@ let instr c frame_size curLab curInstr = match curInstr with
   | Ertltree.Embinop (Ops.Mmul, r1, r2, l) -> let c1 = lookup c r1 and c2 = lookup c r2 in 
                                               (match c2 with
                                                  | Reg _ -> addToGraph curLab (Embinop (Ops.Mmul, c1, c2, l))
-                                                 | _     -> failwith "TODO: bad mul")
+                                                 | Spilled k     -> (let lfromreg = Label.fresh() and lmul = Label.fresh () in 
+                                                             addToGraph lfromreg (Embinop (Ops.Mmov, Reg Register.tmp1, c2, l));
+                                                             addToGraph lmul (Embinop (Ops.Mmul, c1, Reg Register.tmp1, lfromreg));
+                                                             addToGraph  curLab (Embinop (Ops.Mmov, c2, Reg Register.tmp1, lmul))))
   | Ertltree.Embinop (op, r1, r2, l) -> let c1 = lookup c r1 and c2 = lookup c r2 in 
                                               (match c2 with
                                                  | Reg _ -> addToGraph curLab (Embinop (op, c1, c2, l))

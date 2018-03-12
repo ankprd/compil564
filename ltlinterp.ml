@@ -16,7 +16,10 @@ module Stack = struct
   type t = { stack: value array }
   let create () = { stack = Array.make max_size zero }
   let index p =
-    if p mod 8 <> 0 then error "mis-aligned stack access";
+    if p mod 8 <> 0 then begin
+      print_string "p = "; print_int p; print_string " !\n";
+      error "mis-aligned stack access";
+    end ;
     let p = p / 8 in
     if p < 0 || p >= max_size then error "access out of stack";
     p
