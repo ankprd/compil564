@@ -45,7 +45,12 @@ let instr c frame_size curLab curInstr = match curInstr with
                                   addToGraph lpop (Epop (Register.rbp, l));
                                   addToGraph curLab (Embinop (Ops.Mmov, Reg Register.rbp, Reg Register.rsp, lpop))
                                   (*Eload of register * int * register * label*)
-  | Ertltree.Eget_param (n, r, l) -> addToGraph curLab (Eload (Register.rbp, 8*n, (match lookup c r with Reg k -> k | _ -> failwith "nope"), l))
+  | Ertltree.Eget_param (n, r, l) -> let cr = lookup c r in 
+                                     (match cr with
+                                        | Reg k         -> addToGraph curLab (Eload (Register.rbp, -16, k, l))
+                                        | Spilled k     -> (let lmov = Label.fresh () in
+                                                            failwith "well nope"
+                                                            ))
   | Ertltree.Ecall (f, n, l)   -> addToGraph curLab (Ecall (f, l))
   | Ertltree.Emubranch (ubr, r, l1, l2)       -> addToGraph curLab (Emubranch (ubr, lookup c r, l1, l2))
   | Ertltree.Embbranch (mbbr, r1, r2, l1, l2) -> addToGraph curLab (Embbranch (mbbr, lookup c r1, lookup c r2, l1, l2))
@@ -67,7 +72,11 @@ let instr c frame_size curLab curInstr = match curInstr with
   | Ertltree.Embinop (op, r1, r2, l) -> let c1 = lookup c r1 and c2 = lookup c r2 in 
                                               (match c2 with
                                                  | Reg _ -> addToGraph curLab (Embinop (op, c1, c2, l))
-                                                 | _     -> failwith "TODO: bad xxx")
+                                                 | Spilled k     -> let lcalc = Label.fresh () and lrestore = Label.fresh () in
+                                                                      addToGraph lrestore (Embinop (Ops.Mmov, Reg Register.tmp1, c2, l));
+                                                                      addToGraph lcalc (Embinop (op, c1, Reg Register.tmp1, lrestore));
+                                                                     addToGraph curLab (Embinop (Ops.Mmov, c2, Reg Register.tmp1, lcalc))
+                                                                   )
   | Ertltree.Estore (r1, r2, n, l) -> let c1 = lookup c r1 and c2 = lookup c r2 in 
                                       (match c1, c2 with
                                         | Reg rr1, Reg rr2 -> addToGraph curLab (Estore (rr1, rr2, n, l))
@@ -109,7 +118,7 @@ let fct (f : Ertltree.deffun) : (Ltltree.deffun) =
     let liv  = Liveness.liveness f.fun_body in
     let grph = Interfgraph.make liv in
     let (col, nbcol) = Coloration.color grph in
-
+    print_string "nbcol = "; print_int nbcol; print_string (" dans la fonction " ^ f.Ertltree.fun_name ^ "!\n");
     Label.M.iter (fun lab eins -> instr col nbcol lab eins) f.Ertltree.fun_body; 
 
     {
