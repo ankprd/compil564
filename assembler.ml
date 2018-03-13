@@ -56,11 +56,30 @@ and instr (g  : Ltltree.instr Label.M.t) l (instru : Ltltree.instr) : unit=
     | Ltltree.Emunop (Ops.Msetei n, op, l1) -> emit l (X86_64.sete (X86_64.reg X86_64.r11b)); 
                                                emit_wl (X86_64.movzbq (X86_64.reg X86_64.r11b) (X86_64.r11));  
                                                emit_wl ((X86_64.movq) (X86_64.reg X86_64.r11 )(operand op)); 
-                                               lin g l1 (*zbq ou sbq ?*)
+                                               lin g l1 (*zbq ou sbq ?*) (*+ je comprend pas trop ce qu'est censee faire cette instruction, n est la valeur a mettre dans reg ? si c'est le cas, ca fait pas du tout ce qu'il faut ici*)
     | Ltltree.Emunop (Ops.Msetnei n, op, l1) -> emit l (X86_64.setne (X86_64.reg X86_64.r11b)); 
                                                 emit_wl (X86_64.movzbq (X86_64.reg X86_64.r11b) (X86_64.r11));  
                                                 emit_wl ((X86_64.movq) (X86_64.reg X86_64.r11 )(operand op)); 
-                                                lin g l1 (*zbq ou sbq ?*)
+                                                lin g l1 (*zbq ou sbq ?*)(*idem*)
+    | Ltltree.Embinop (Ops.Mmov, r1, r2, l1) ->(
+        match (r1, r2) with 
+        |(Ltltree.Reg rr1, x) -> emit l (X86_64.movq (operand r1) (operand r2))
+        |(x, Ltltree.Reg rr2) -> emit l (X86_64.movq (operand r1) (operand r2))
+        |_ -> emit l (X86_64.movq (operand r1) (X86_64.reg X86_64.r11)); emit_wl (X86_64.movq (X86_64.reg X86_64.r11) (operand r2))
+        );
+        lin g l1
+
+    (*type mbinop =
+  | Madd
+  | Msub
+  | Mmul
+  | Mdiv
+  | Msete
+  | Msetne
+  | Msetl
+  | Msetle
+  | Msetg
+  | Msetge*)
     (*
     (** les mêmes que dans ERTL, mais avec operand à la place de register *)
     | Embinop of mbinop * operand * operand * label
