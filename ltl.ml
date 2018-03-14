@@ -33,8 +33,7 @@ let is_physical r = match r with
 let instr c frame_size curLab curInstr = match curInstr with
   | Ertltree.Econst (n, r, l)  -> addToGraph curLab (Econst (n, lookup c r, l))
   | Ertltree.Egoto l           -> addToGraph curLab (Egoto l)
-
-  (* FIXME: ok je supprime le add $0, %rsp mais est-ce qu'on peut pas tout enlever à part le push de %rbp qui est callee-saved ? *)
+  (* FIXME: optimiser quand frame_size = 0 *)
   | Ertltree.Ealloc_frame l    ->   let ladd = Label.fresh () in
                                     addToGraph ladd (Emunop ((Ops.Maddi (Int32.of_int (-8*frame_size))), Reg Register.rsp, l));
                                     let lmov = Label.fresh () in
@@ -57,7 +56,6 @@ let instr c frame_size curLab curInstr = match curInstr with
   | Ertltree.Embbranch (mbbr, r1, r2, l1, l2) -> addToGraph curLab (Embbranch (mbbr, lookup c r1, lookup c r2, l1, l2))
   | Ertltree.Emunop (op, r, l) -> addToGraph curLab (Emunop (op, lookup c r, l))
   | Ertltree.Epush_param (r, l) -> addToGraph curLab (Epush (lookup c r, l))
-  (* TODO: les binops avec les deux arguments en mémoire -> nope. Relancer mais en ayant mis LE DEUXIÈME ARGUMENT en registre *)
   | Ertltree.Embinop (Ops.Mmov, r1, r2, l) -> let c1 = lookup c r1 and c2 = lookup c r2 in 
                                               (if c1 = c2 then 
                                                 addToGraph curLab (Egoto l)
