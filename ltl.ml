@@ -81,11 +81,21 @@ let instr c frame_size curLab curInstr = match curInstr with
   | Ertltree.Estore (r1, r2, n, l) -> let c1 = lookup c r1 and c2 = lookup c r2 in 
                                       (match c1, c2 with
                                         | Reg rr1, Reg rr2 -> addToGraph curLab (Estore (rr1, rr2, n, l))
-                                        | _            -> failwith "not yet implemented in store !")
+
+                                        | _ -> failwith "not yet implemented in store !")
   | Ertltree.Eload (r1, n, r2, l) -> let c1 = lookup c r1 and c2 = lookup c r2 in 
                                       (match c1, c2 with
                                         | Reg rr1, Reg rr2 -> addToGraph curLab (Eload (rr1, n, rr2, l))
-                                        | _            -> failwith "not yet implemented in load !")
+                                        | Spilled k1, Reg rr2 -> (let lload = Label.fresh () in
+                                                                 addToGraph lload (Eload (Register.tmp1, n, rr2, l));
+                                                                 addToGraph curLab (Embinop (Ops.Mmov, Spilled k1, Reg Register.tmp1, l)))
+                                        | Reg rr1, Spilled k2 -> (let lmov = Label.fresh () in 
+                                                                  addToGraph lmov (Embinop (Ops.Mmov, Reg Register.tmp1, Spilled k2, l));
+                                                                  addToGraph curLab (Eload (rr1, n, Register.tmp1, lmov)))
+                                        | Spilled k1, Spilled k2 -> (let lload = Label.fresh () and lmov = Label.fresh () in
+                                                                     addToGraph lmov (Embinop (Ops.Mmov, Spilled k1, Reg Register.tmp1, l));
+                                                                     addToGraph lload (Eload (Register.tmp1, n, Register.tmp1, lmov));
+                                                                     addToGraph curLab (Embinop (Ops.Mmov, Reg Register.tmp1, Spilled k2, lload))))
   | Ertltree.Ereturn -> addToGraph curLab (Ereturn)
 
 
