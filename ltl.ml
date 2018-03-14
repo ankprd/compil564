@@ -49,7 +49,8 @@ let instr c frame_size curLab curInstr = match curInstr with
                                      (match cr with
                                         | Reg k         -> addToGraph curLab (Embinop (Mmov, Spilled n, Reg k, l))
                                         | Spilled k     -> (let lmov = Label.fresh () in
-                                                            failwith "todo: nope"
+                                                            addToGraph lmov (Embinop (Mmov, Reg Register.tmp1, Spilled k, l));
+                                                            addToGraph curLab (Embinop (Mmov, Spilled n, Reg Register.tmp1, lmov));
                                                             ))
   | Ertltree.Ecall (f, n, l)   -> addToGraph curLab (Ecall (f, l))
   | Ertltree.Emubranch (ubr, r, l1, l2)       -> addToGraph curLab (Emubranch (ubr, lookup c r, l1, l2))
@@ -118,7 +119,6 @@ let fct (f : Ertltree.deffun) : (Ltltree.deffun) =
     let liv  = Liveness.liveness f.fun_body in
     let grph = Interfgraph.make liv in
     let (col, nbcol) = Coloration.color grph in
-    print_string "nbcol = "; print_int nbcol; print_string (" dans la fonction " ^ f.Ertltree.fun_name ^ "!\n");
     Label.M.iter (fun lab eins -> instr col nbcol lab eins) f.Ertltree.fun_body; 
 
     {
