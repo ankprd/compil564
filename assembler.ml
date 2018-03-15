@@ -46,6 +46,21 @@ let rec lin (g : Ltltree.instr Label.M.t) l :unit=
   end
 
 and instr (g  : Ltltree.instr Label.M.t) l (instru : Ltltree.instr) : unit= 
+    let isSetAndTranslateBinop (ope : Ops.mbinop)  = (*on renvoie 3 elements car les types sont differents, et si true c'est le 3eme et pas le 2eme et si false c;est le 2eme*)
+      match ope with
+      |Ops.Msete -> (1, X86_64.addq, X86_64.sete)
+      |Ops.Msetne -> (1, X86_64.addq, X86_64.setne)
+      |Ops.Msetl -> (1, X86_64.addq, X86_64.setl)
+      |Ops.Msetle -> (1, X86_64.addq, X86_64.setle)
+      |Ops.Msetge -> (1, X86_64.addq, X86_64.setge)
+      |Ops.Msetg -> (1, X86_64.addq, X86_64.setg)
+      |Ops.Madd -> (0, X86_64.addq, X86_64.sete)
+      |Ops.Msub -> (0, X86_64.subq, X86_64.sete)
+      |Ops.Mmul -> (0, X86_64.imulq, X86_64.sete)
+      |Ops.Mmov -> (0, X86_64.movq, X86_64.sete)
+      |Ops.Mdiv -> (2, X86_64.addq, X86_64.sete) (*on renvoie n' importe quoi, idivq a pas le bon type*)
+    in
+
     match instru with
     | Ltltree.Econst (n, r, l1) -> emit l (X86_64.movq (X86_64.imm32 n) (operand r)); lin g l1
     | Ltltree.Eload (r1, n, r2, l1) -> emit l (X86_64.movq (X86_64.ind ~ofs:n (register r1)) (X86_64.reg (register r2)))
@@ -54,35 +69,31 @@ and instr (g  : Ltltree.instr Label.M.t) l (instru : Ltltree.instr) : unit=
     | Ltltree.Ereturn -> emit l X86_64.ret
     | Ltltree.Emunop (Ops.Maddi n, op, l1) -> emit l (X86_64.addq (X86_64.imm32 n) (operand op)); lin g l1
     | Ltltree.Emunop (Ops.Msetei n, op, l1) -> emit l (X86_64.sete (X86_64.reg X86_64.r11b)); 
-                                               emit_wl (X86_64.movzbq (X86_64.reg X86_64.r11b) (X86_64.r11));  
-                                               emit_wl ((X86_64.movq) (X86_64.reg X86_64.r11 )(operand op)); 
+                                               emit_wl (X86_64.movzbq (X86_64.reg X86_64.r11b) (X86_64.r11)); (*on etend pas directement dans op car movzbq attend un registre en 2eme argument et op n'en est pas forcement un*)
+                                               emit_wl (X86_64.movq (X86_64.reg X86_64.r11) (operand op));
                                                lin g l1 (*zbq ou sbq ?*) (*+ je comprend pas trop ce qu'est censee faire cette instruction, n est la valeur a mettre dans reg ? si c'est le cas, ca fait pas du tout ce qu'il faut ici*)
     | Ltltree.Emunop (Ops.Msetnei n, op, l1) -> emit l (X86_64.setne (X86_64.reg X86_64.r11b)); 
-                                                emit_wl (X86_64.movzbq (X86_64.reg X86_64.r11b) (X86_64.r11));  
-                                                emit_wl ((X86_64.movq) (X86_64.reg X86_64.r11 )(operand op)); 
-                                                lin g l1 (*zbq ou sbq ?*)(*idem*)
-    | Ltltree.Embinop (Ops.Mmov, r1, r2, l1) ->(
-        match (r1, r2) with 
-        |(Ltltree.Reg rr1, x) -> emit l (X86_64.movq (operand r1) (operand r2))
-        |(x, Ltltree.Reg rr2) -> emit l (X86_64.movq (operand r1) (operand r2))
-        |_ -> emit l (X86_64.movq (operand r1) (X86_64.reg X86_64.r11)); emit_wl (X86_64.movq (X86_64.reg X86_64.r11) (operand r2))
-        );
-        lin g l1
-
-    (*type mbinop =
-  | Madd
-  | Msub
-  | Mmul
-  | Mdiv
-  | Msete
-  | Msetne
-  | Msetl
-  | Msetle
-  | Msetg
-  | Msetge*)
+                                                emit_wl (X86_64.movzbq (X86_64.reg X86_64.r11b) (X86_64.r11)); (*on etend pas directement dans op car movzbq attend un registre en 2eme argument et op n'en est pas forcement un*)
+                                               emit_wl (X86_64.movq (X86_64.reg X86_64.r11) (operand op));
+                                               lin g l1 (*zbq ou sbq ?*)(*idem*)
+    | Ltltree.Embinop (oper, r1, r2, l1) -> (
+      let (isSet, opeF, opeT) = isSetAndTranslateBinop oper in
+       match isSet with
+       |2 -> emit l (X86_64.pushq (X86_64.reg X86_64.rdx)); emit_wl (X86_64.idivq (operand r1)); emit_wl (X86_64.popq X86_64.rdx) (*attention on trashe rdx et r2 est rax normalement (cf generation de ertl)*)
+       |0 -> (
+          match (r1, r2) with 
+          |(Ltltree.Reg rr1, x) -> emit l (opeF (operand r1) (operand r2))
+          |(x, Ltltree.Reg rr2) -> emit l (opeF (operand r1) (operand r2))
+          |_ -> emit l (X86_64.movq (operand r1) (X86_64.reg X86_64.r11)); emit_wl (opeF (X86_64.reg X86_64.r11) (operand r2))
+          )
+        |1 -> emit l (X86_64.cmpq (operand r1) (operand r2));
+                          emit l (opeT (X86_64.reg X86_64.r11b)); 
+                          emit_wl (X86_64.movzbq (X86_64.reg X86_64.r11b) (X86_64.r11));
+                          emit_wl (X86_64.movq (X86_64.reg X86_64.r11) (operand r2))
+      );
+      lin g l1
     (*
     (** les mêmes que dans ERTL, mais avec operand à la place de register *)
-    | Embinop of mbinop * operand * operand * label
     | Emubranch of mubranch * operand * label * label
     | Embbranch of mbbranch * operand * operand * label * label
     | Epush of operand * label
