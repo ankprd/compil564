@@ -145,12 +145,13 @@ let () =
     (* Plie les fonctions pour en faire un programme *)
     let rec fold_functions funs = match funs with
         | []   -> {X86_64.text = (X86_64.nop : X86_64.text); data = (X86_64.nop : X86_64.data)}
-        | f::q -> (let nextp = fold_functions q in
+        | f::q -> (Assembler.code := [];
                   Assembler.lin f.Ltltree.fun_body f.fun_entry;
-                  let loctext = List.fold_right (fun e acc -> X86_64.(++) acc (trans e)) !Assembler.code (X86_64.nop : X86_64.text) in
-                    {text =  X86_64.(++) (X86_64.inline (f.fun_name ^ ":\n")) loctext; data = (X86_64.nop : X86_64.data)}) in
+                  let loctext = X86_64.(++) (X86_64.inline ("\n" ^ f.fun_name ^ ":\n")) (List.fold_right (fun e acc -> X86_64.(++) acc (trans e)) !Assembler.code (X86_64.nop : X86_64.text)) in
+                  let locdata = (X86_64.nop : X86_64.data) in
+                  let p = fold_functions q in
+                  {text = X86_64.(++) loctext p.text; data = locdata}) in
 
-    List.iter (fun f -> Assembler.lin f.Ltltree.fun_body f.fun_entry) p.Ltltree.funs;
     let ultim_prog = fold_functions p.Ltltree.funs  in X86_64.print_program std_formatter ultim_prog
     
     
