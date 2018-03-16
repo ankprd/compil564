@@ -154,7 +154,6 @@ let () =
 
     let ultim_prog = fold_functions p.Ltltree.funs  in X86_64.print_program std_formatter {text = X86_64.(++) (X86_64.inline "\t.globl main\n") ultim_prog.text; data = ultim_prog.data}
     
-    
 
   with
     | Lexer.Lexical_error c ->

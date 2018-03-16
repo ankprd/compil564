@@ -33,17 +33,27 @@ let is_physical r = match r with
 let instr c frame_size curLab curInstr = match curInstr with
   | Ertltree.Econst (n, r, l)  -> addToGraph curLab (Econst (n, lookup c r, l))
   | Ertltree.Egoto l           -> addToGraph curLab (Egoto l)
-  (* FIXME: optimiser quand frame_size = 0 *)
-  | Ertltree.Ealloc_frame l    ->   let ladd = Label.fresh () in
-                                    addToGraph ladd (Emunop ((Ops.Maddi (Int32.of_int (-8*frame_size))), Reg Register.rsp, l));
-                                    let lmov = Label.fresh () in
-                                    addToGraph lmov (Embinop (Ops.Mmov, Reg Register.rsp, Reg Register.rbp, ladd));
-                                    addToGraph curLab (Epush (Reg Register.rbp, lmov))
+  | Ertltree.Ealloc_frame l    ->   if frame_size <> 0 then begin
+                                      let ladd = Label.fresh () in
+                                      addToGraph ladd (Emunop ((Ops.Maddi (Int32.of_int (-8*frame_size))), Reg Register.rsp, l));
+                                      let lmov = Label.fresh () in
+                                      addToGraph lmov (Embinop (Ops.Mmov, Reg Register.rsp, Reg Register.rbp, ladd));
+                                      addToGraph curLab (Epush (Reg Register.rbp, lmov))
+                                    end
+
+                                    else begin
+                                      addToGraph curLab (Egoto l)
+                                    end
                                   
-  | Ertltree.Edelete_frame l   -> let lpop = Label.fresh () in
-                                  addToGraph lpop (Epop (Register.rbp, l));
-                                  addToGraph curLab (Embinop (Ops.Mmov, Reg Register.rbp, Reg Register.rsp, lpop))
-                                  (*Eload of register * int * register * label*)
+  | Ertltree.Edelete_frame l   -> if frame_size <> 0 then begin
+                                    let lpop = Label.fresh () in
+                                    addToGraph lpop (Epop (Register.rbp, l));
+                                    addToGraph curLab (Embinop (Ops.Mmov, Reg Register.rbp, Reg Register.rsp, lpop))
+                                  end
+
+                                  else begin
+                                    addToGraph curLab (Egoto l)
+                                  end
   | Ertltree.Eget_param (n, r, l) -> let cr = lookup c r in 
                                      (match cr with
                                         | Reg k         -> addToGraph curLab (Embinop (Mmov, Spilled n, Reg k, l))
