@@ -46,7 +46,8 @@ let rec lin (g : Ltltree.instr Label.M.t) l :unit=
   end
 
 and instr (g  : Ltltree.instr Label.M.t) l (instru : Ltltree.instr) : unit= 
-    let isSetAndTranslateBinop (ope : Ops.mbinop)  = (*on renvoie 3 elements car les types sont differents, et si true c'est le 3eme et pas le 2eme et si false c;est le 2eme*)
+    (*on renvoie 3 elements car les types sont differents, et si true c'est le 3eme et pas le 2eme et si false c;est le 2eme*)
+    let isSetAndTranslateBinop (ope : Ops.mbinop)  = 
       match ope with
       |Ops.Msete -> (1, X86_64.addq, X86_64.sete)
       |Ops.Msetne -> (1, X86_64.addq, X86_64.setne)
@@ -79,17 +80,16 @@ and instr (g  : Ltltree.instr Label.M.t) l (instru : Ltltree.instr) : unit=
     | Ltltree.Embinop (oper, r1, r2, l1) -> (
       let (isSet, opeF, opeT) = isSetAndTranslateBinop oper in
        match isSet with
-       |2 -> emit l (X86_64.pushq (X86_64.reg X86_64.rdx)); emit_wl (X86_64.idivq (operand r1)); emit_wl (X86_64.popq X86_64.rdx) (*attention on trashe rdx et r2 est rax normalement (cf generation de ertl)*)
-       |0 -> (
-          match (r1, r2) with 
-          |(Ltltree.Reg rr1, x) -> emit l (opeF (operand r1) (operand r2))
-          |(x, Ltltree.Reg rr2) -> emit l (opeF (operand r1) (operand r2))
-          |_ -> emit l (X86_64.movq (operand r1) (X86_64.reg X86_64.r11)); emit_wl (opeF (X86_64.reg X86_64.r11) (operand r2))
-          )
-        |1 -> emit l (X86_64.cmpq (operand r1) (operand r2));
+        | 2 -> emit l (X86_64.pushq (X86_64.reg X86_64.rdx)); emit_wl (X86_64.idivq (operand r1)); emit_wl (X86_64.popq X86_64.rdx) (*attention on trashe rdx et r2 est rax normalement (cf generation de ertl)*)
+        | 0 -> (match (r1, r2) with 
+                  | (Ltltree.Reg rr1, x) -> emit l (opeF (operand r1) (operand r2))
+                  | (x, Ltltree.Reg rr2) -> emit l (opeF (operand r1) (operand r2))
+                  | _ -> emit l (X86_64.movq (operand r1) (X86_64.reg X86_64.r11)); emit_wl (opeF (X86_64.reg X86_64.r11) (operand r2)))
+        | 1 -> emit l (X86_64.cmpq (operand r1) (operand r2));
                           emit l (opeT (X86_64.reg X86_64.r11b)); 
                           emit_wl (X86_64.movzbq (X86_64.reg X86_64.r11b) (X86_64.r11));
                           emit_wl (X86_64.movq (X86_64.reg X86_64.r11) (operand r2))
+        | _ -> failwith "unreachable code"
       );
       lin g l1
     (*
@@ -102,4 +102,15 @@ and instr (g  : Ltltree.instr Label.M.t) l (instru : Ltltree.instr) : unit=
     (** nouveau *)
     | Epop of register * label
     *)
+    | Ltltree.Epush (op, l1) -> emit l (X86_64.pushq (operand op)); lin g l1
+    | Ltltree.Epop (r, l1) -> emit l (X86_64.popq (register r)); lin g l1
+    | Ltltree.Ecall (id, l1) -> emit l (X86_64.call id); lin g l1
+    (*  opérations de branchement unaires 
+type mubranch =
+  | Mjz
+  | Mjnz
+  | Mjlei of int32
+  | Mjgi  of int32
+*)
+    | Ltltree.Emubranch (mub, op, l1, l2) -> failwith "no unop"
     |_-> failwith "not done"

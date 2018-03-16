@@ -133,6 +133,9 @@ let () =
     end;
   
     let p = Ltl.program p in
+
+    if debug then Ltltree.print_file std_formatter p;
+    if !interp_ltl then begin ignore (Ltlinterp.program p); exit 0 end;
     (*pour forcer la compil de assembler*)
     let nP = p in
     match nP.Ltltree.funs with
@@ -140,8 +143,8 @@ let () =
     |{fun_name = a; fun_entry = lentry; fun_body = graphf}::t -> 
       let temp = Assembler.lin graphf lentry in ()
     ;
-    if debug then Ltltree.print_file std_formatter p;
-    if !interp_ltl then begin ignore (Ltlinterp.program p); exit 0 end;
+    
+    
 
   with
     | Lexer.Lexical_error c ->
