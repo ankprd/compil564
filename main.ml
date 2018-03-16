@@ -136,13 +136,22 @@ let () =
 
     if debug then Ltltree.print_file std_formatter p;
     if !interp_ltl then begin ignore (Ltlinterp.program p); exit 0 end;
-    (*pour forcer la compil de assembler*)
-    let nP = p in
-    match nP.Ltltree.funs with
-    |[] -> ()
-    |{fun_name = a; fun_entry = lentry; fun_body = graphf}::t -> 
-      let temp = Assembler.lin graphf lentry in ()
-    ;
+    
+    (* transforme une instruction assembleur en un type traitable par la suite (du string) *)
+    let trans e = match e with
+                    | Assembler.Code t -> t
+                    | Assembler.Label t -> X86_64.inline (t :> string) in
+
+    (* Plie les fonctions pour en faire un programme *)
+    let rec fold_functions funs = match funs with
+        | []   -> {X86_64.text = (X86_64.nop : X86_64.text); data = (X86_64.nop : X86_64.data)}
+        | f::q -> (let nextp = fold_functions q in
+                  Assembler.lin f.Ltltree.fun_body f.fun_entry;
+                  let loctext = List.fold_right (fun e acc -> X86_64.(++) acc (trans e)) !Assembler.code (X86_64.nop : X86_64.text) in
+                    {text =  X86_64.(++) (X86_64.inline (f.fun_name ^ ":\n")) loctext; data = (X86_64.nop : X86_64.data)}) in
+
+    List.iter (fun f -> Assembler.lin f.Ltltree.fun_body f.fun_entry) p.Ltltree.funs;
+    let ultim_prog = fold_functions p.Ltltree.funs  in X86_64.print_program std_formatter ultim_prog
     
     
 
