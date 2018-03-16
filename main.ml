@@ -140,7 +140,7 @@ let () =
     (* transforme une instruction assembleur en un type traitable par la suite (du string) *)
     let trans e = match e with
                     | Assembler.Code t -> t
-                    | Assembler.Label t -> X86_64.inline (t :> string) in
+                    | Assembler.Label t -> X86_64.label (t :> string) in
 
     (* Plie les fonctions pour en faire un programme *)
     let rec fold_functions funs = match funs with
@@ -152,8 +152,8 @@ let () =
                   let p = fold_functions q in
                   {text = X86_64.(++) loctext p.text; data = locdata}) in
 
-    let ultim_prog = fold_functions p.Ltltree.funs  in X86_64.print_program std_formatter {text = X86_64.(++) (X86_64.inline "\t.globl main\n") ultim_prog.text; data = ultim_prog.data}
-    
+    let ultim_prog = fold_functions p.Ltltree.funs  in X86_64.print_program std_formatter {text = X86_64.(++) (X86_64.globl "main") ultim_prog.text; data = ultim_prog.data}
+    (* let ultim_prog = fold_functions p.Ltltree.funs  in X86_64.print_in_file "test.s" {text = X86_64.(++) (X86_64.inline "\t.globl main\n") ultim_prog.text; data = ultim_prog.data} *)
 
   with
     | Lexer.Lexical_error c ->
