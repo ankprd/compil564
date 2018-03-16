@@ -20,5 +20,6 @@ int f2()
 
 int main()
 {
+  f1();
   return 42;
 }

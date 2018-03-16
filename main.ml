@@ -152,7 +152,7 @@ let () =
                   let p = fold_functions q in
                   {text = X86_64.(++) loctext p.text; data = locdata}) in
 
-    let ultim_prog = fold_functions p.Ltltree.funs  in X86_64.print_program std_formatter ultim_prog
+    let ultim_prog = fold_functions p.Ltltree.funs  in X86_64.print_program std_formatter {text = X86_64.(++) (X86_64.inline "\t.globl main\n") ultim_prog.text; data = ultim_prog.data}
     
     
 
