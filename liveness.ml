@@ -56,8 +56,6 @@ let liveness (cfg : Ertltree.cfg) : live_info Label.map = let (assoc : live_info
 
     let preds : ((Ertltree.label, Ertltree.label list) Hashtbl.t) = Hashtbl.create 1 in
     
-    (* C'est codé n'importe comment parce que je connais pas mutable et ses conséquences *)
-
     (* Pour chaque label "lbl" dans le cfg :
         Pour chaque successeur "s" de ce label :
          Ajouter l comme prédecesseur de s
