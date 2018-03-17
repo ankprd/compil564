@@ -17,6 +17,8 @@ let binop2Op bnop = match bnop with
 	| Ptree.Bge  -> Ops.Msetge
 	| _			 -> failwith "Unreachable binop2Op"
 
+let intofbool b = if b then 1 else 0
+
 (* Ça peut se mémoïser ça non ? Changer la datastructure "structure" pour stocker une Hashtbl var -> index plutôt que la liste ordonnée pour obtenir l'index en O(1) *)
 let indexInList l e =
 	let rec aux i ll = match ll with
@@ -93,7 +95,7 @@ let rec condition e truel falsel =
 	       Pratique pour parcourir en même temps les expressions passées en paramètres et les registres dans lesquels on les met ! *)
 		| Ttree.Ecall (fid, exprlist) -> let myregs = List.map (fun x -> Register.fresh ()) exprlist in
 										 let lres = generate (Ecall (destr, fid, myregs, destl)) in
-										 List.fold_right2 (fun arg reg (lab,_,_) -> expr arg reg lab) exprlist myregs (lres, false, 0)
+										 List.fold_right2 (fun arg reg (lab,_,_) -> let (lnext,_,_) = expr arg reg lab in (lnext, false, 0)) exprlist myregs (lres, false, 0)
  
   and stmt (s : Ttree.stmt) destl retr exitl = match s with
 		| Ttree.Sreturn e -> let (l,_,_) = expr e retr exitl in l
@@ -148,22 +150,39 @@ let rec condition e truel falsel =
     										  let (compute2, red2, v2) = expr e2 rintermed compare2 in
     										  let compare1 = generate (Emubranch (Ops.Mjz, rintermed, compute2, set1)) in
     										  let (compute1, red1, v1) = expr e1 rintermed compare1 in
-                                              (* FIXME *)
-    										  (compute1, false, 0))
+                                              
+                                              if red1 && red2 then 
+                                                let truek = (if v1 = 0 && v2 = 0 then 0 else 1) in let trueset = generate (Econst (Int32.of_int truek, destr, destl)) in
+    										  (trueset, true, truek)
+                                              else
+                                              (compute1, false, 0))
     	| Ttree.Ebinop (Ptree.Band, e1, e2) -> (let rintermed = Register.fresh () in 
     										  let set1 = generate (Econst (Int32.of_int 1, destr, destl)) and set0 = generate (Econst (Int32.of_int 0, destr, destl)) in
     										  let compare2 = generate (Emubranch (Ops.Mjz, rintermed, set0, set1)) in
     										  let (compute2, red2, v2) = expr e2 rintermed compare2 in
     										  let compare1 = generate (Emubranch (Ops.Mjz, rintermed, set0, compute2)) in
     										  let (compute1, red1, v1) = expr e1 rintermed compare1 in
-                                              (* FIXME *)
-    										  (compute1, false, 0))
-    	| Ttree.Ebinop (op, e1, e2)			-> let rintermed = Register.fresh () in
+                                              
+                                              if red1 && red2 then 
+                                                let truek = (if v1 = 0 || v2 = 0 then 0 else 1) in let trueset = generate (Econst (Int32.of_int truek, destr, destl)) in
+                                              (trueset, true, truek)
+                                              else
+                                              (compute1, false, 0))
+    	| Ttree.Ebinop (op, e1, e2) when List.mem op [Ptree.Beq; Ptree.Bneq; Ptree.Blt; Ptree.Ble; Ptree.Bgt; Ptree.Bge] -> let rintermed = Register.fresh () in
     										   let lres = generate (Embinop (binop2Op op, rintermed, destr, destl)) in
     										   let (l2, red2, v2) = expr e2 rintermed lres in 
 											   let (l1, red1, v1) = expr e1 destr l2 in
-                                               (* FIXME *)
-    										   (l1, false, 0)
+                                               
+                                               if red1 && red2 then 
+                                               begin
+                                                  let truek = intofbool (match op with | Ptree.Beq -> v1 = v2 | Ptree.Bneq -> v1 <> v2 | Ptree.Blt -> v1 < v2 
+                                                                                       | Ptree.Ble -> v1 <= v2 | Ptree.Bgt -> v1 > v2 | Ptree.Bge -> v1 >= v2
+                                                                                       | _ -> failwith "unreachable op") in
+                                                  let trueset = generate (Econst (Int32.of_int truek, destr, destl)) in
+                                                  (trueset, true, truek)
+                                                end
+                                               else 
+    										      (l1, false, 0)
     	| _ -> failwith "Unreachable generateBinop"
 
     and generateUnop e destr destl = match e with
