@@ -1,25 +1,12 @@
-/*int many(int a, int b, int c, int d, int e, int f, int g, int h, int i, int j) {
-    many(b, c, d, e, f, g, h, i, j, a);
-  return 0;
-}
+
 int main() {
-  many(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+<<<<<<< HEAD
+  putchar(216/2);
+=======
+  if(1 < 2)
+    putchar('Y');
+  else
+    putchar('N');
+>>>>>>> 383f4e3fe9a0b43c41853cb73ad7f2ee90d5cb25
   return 0;
-}
-*/
-
-int f1()
-{
-  return 1;
-}
-
-int f2()
-{
-  return 2;
-}
-
-int main()
-{
-  f1();
-  return 42;
 }

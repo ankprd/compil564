@@ -152,9 +152,11 @@ let () =
                   let p = fold_functions q in
                   {text = X86_64.(++) loctext p.text; data = locdata}) in
 
-    let ultim_prog = fold_functions p.Ltltree.funs  in X86_64.print_program std_formatter {text = X86_64.(++) (X86_64.globl "main") ultim_prog.text; data = ultim_prog.data}
-    (* let ultim_prog = fold_functions p.Ltltree.funs  in X86_64.print_in_file "test.s" {text = X86_64.(++) (X86_64.inline "\t.globl main\n") ultim_prog.text; data = ultim_prog.data} *)
-
+    let ultim_prog = fold_functions p.Ltltree.funs in 
+        (* Print to file *)
+        X86_64.print_in_file ((String.sub !ifile 0 (String.length !ifile - 2)) ^ ".s") {text = X86_64.(++) (X86_64.globl "main") ultim_prog.text; data = ultim_prog.data}
+        (* Print to stdout *)
+        (*X86_64.print_program std_formatter {text = X86_64.(++) (X86_64.globl "main") ultim_prog.text; data = ultim_prog.data}*)
   with
     | Lexer.Lexical_error c ->
 	localisation (Lexing.lexeme_start_p buf);
