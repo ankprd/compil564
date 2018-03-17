@@ -86,7 +86,7 @@ and instr (g  : Ltltree.instr Label.M.t) l (instru : Ltltree.instr) : unit=
                   | (x, Ltltree.Reg rr2) -> emit l (opeF (operand r1) (operand r2))
                   | _ -> emit l (X86_64.movq (operand r1) (X86_64.reg X86_64.r11)); emit_wl (opeF (X86_64.reg X86_64.r11) (operand r2)))
         | 1 -> emit l (X86_64.cmpq (operand r1) (operand r2));
-                          emit l (opeT (X86_64.reg X86_64.r11b)); 
+                          emit_wl (opeT (X86_64.reg X86_64.r11b)); 
                           emit_wl (X86_64.movzbq (X86_64.reg X86_64.r11b) (X86_64.r11));
                           emit_wl (X86_64.movq (X86_64.reg X86_64.r11) (operand r2))
         | _ -> failwith "unreachable code"
@@ -112,5 +112,22 @@ type mubranch =
   | Mjlei of int32
   | Mjgi  of int32
 *)
-    | Ltltree.Emubranch (mub, op, l1, l2) -> failwith "no unop"
+(* let je (z: label) = ins "je %s" z
+let jz (z: label) = ins "jz %s" z
+let jne(z: label) = ins "jne %s" z
+let jnz(z: label) = ins "jnz %s" z
+let js (z: label) = ins "js %s" z
+let jns(z: label) = ins "jns %s" z
+let jg (z: label) = ins "jg %s" z
+let jge(z: label) = ins "jge %s" z
+let jl (z: label) = ins "jl %s" z
+let jle(z: label) = ins "jle %s" z
+let ja (z: label) = ins "ja %s" z
+let jae(z: label) = ins "jae %s" z
+let jb (z: label) = ins "jb %s" z
+let jbe(z: label) = ins "jbe %s" z
+*)
+    | Ltltree.Emubranch (mub, op, l1, l2) -> match mub with
+                                                | Mjz -> emit l (X86_64.jz (l1 :> string)); lin g l1; lin g l2
+                                                | _ -> failwith "not yet"
     |_-> failwith "not done"

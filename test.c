@@ -8,11 +8,16 @@ int main() {
 }
 */
 
+int fact(int n)
+{
+  return 0;
+}
 int main() {
-  putchar(65 + (1 || 1)); // 66, pas 67 !
-  putchar(65 + (0 || 2)); // 66, pas 67 !
-  putchar(65 + (1 || 0));
-  putchar(65 + (0 || 0));
+  int x, y;
+  x = 65;
+  putchar(x);
+  putchar(x = x+1);
+  putchar(y = x+1);
   putchar(10);
   return 0;
 }
