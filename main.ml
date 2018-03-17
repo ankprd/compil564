@@ -156,7 +156,11 @@ let () =
         (* Print to file *)
         X86_64.print_in_file ((String.sub !ifile 0 (String.length !ifile - 2)) ^ ".s") {text = X86_64.(++) (X86_64.globl "main") ultim_prog.text; data = ultim_prog.data};
         (* Print to stdout *)
-        if debug then X86_64.print_program std_formatter {text = X86_64.(++) (X86_64.globl "main") ultim_prog.text; data = ultim_prog.data};
+        if debug then 
+        begin
+            print_string "=== ASM ==================================================\n";
+            X86_64.print_program std_formatter {text = X86_64.(++) (X86_64.globl "main") ultim_prog.text; data = ultim_prog.data};
+        end
   with
     | Lexer.Lexical_error c ->
 	localisation (Lexing.lexeme_start_p buf);
