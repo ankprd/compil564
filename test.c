@@ -1,10 +1,12 @@
-int f(int x, int y, int z, int t) {
-  if (!x) return 10;
-  putchar(x);
-  return f(y, z, t, x);
-}
+struct S { int a; int b; };
 
 int main() {
-  putchar(f('A', 'B', 'C', 0));
+  struct S *s;
+  s = sbrk(sizeof(struct S));
+  s->a = 'A';
+  putchar(s->a);
+  s->b = 'B';
+  putchar(s->b);
+  putchar(10);
   return 0;
 }
