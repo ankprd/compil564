@@ -31,6 +31,7 @@ let ptreeOp2Mbinop op = match op with
 	| Ptree.Bmul -> Ops.Mmul
 	| _          -> failwith "Unimplemented"
 
+
 let rec condition e truel falsel = 
 	match e.Ttree.expr_node with
 	| Ttree.Econst n when n = (Int32.of_int 0) -> falsel
@@ -52,14 +53,15 @@ let rec condition e truel falsel =
 	(* Arguments : l'expression, le registre où stocker le résultat de celle-ci, le label à qui passer la main à la fin
 	   Renvoie : le label de l'entry point qui permet de calculer cette expression dans le graphe *)
 	and expr (e : Ttree.expr) destr destl = match e.Ttree.expr_node with
-		| Ttree.Econst n -> generate (Econst (n, destr, destl))
+		| Ttree.Econst n -> (generate (Econst (n, destr, destl)), true, Int32.to_int n)
 		| Ttree.Eaccess_local nomVar ->  let regVar = Hashtbl.find locenv (e.Ttree.expr_typ, nomVar)
-										 in generate (Embinop (Ops.Mmov, regVar, destr, destl))
+										 in (generate (Embinop (Ops.Mmov, regVar, destr, destl)), false, 0)
 
 		(* Attention: ici on génère un simple mov de regvar vers destr, pas un load *)
 		| Ttree.Eassign_local (nomVar, expAAss) -> 	let regVar = Hashtbl.find locenv (e.Ttree.expr_typ, nomVar) in
 					                               	let labelAss = generate (Embinop (Ops.Mmov, destr, regVar, destl))in
 					                            	expr expAAss destr labelAss
+
 		| Ttree.Ebinop _ -> generateBinop e.Ttree.expr_node destr destl
 		| Ttree.Eunop  _ -> generateUnop e.Ttree.expr_node destr destl
 		| Ttree.Eaccess_field (ex, f)     -> let regInter = Register.fresh () in 
@@ -81,20 +83,21 @@ let rec condition e truel falsel =
 											 
                                              let laccField = generate (Estore (regValExpr, regAddrMem, idField * 8, destl)) in
                                              let lassDestr = generate(Embinop (Ops.Mmov, regValExpr, destr, laccField)) in
-											 let lCalcAddr = expr e1 regAddrMem lassDestr in
+                                             (* FIXME *)
+											 let (lCalcAddr, reducible, v) = expr e1 regAddrMem lassDestr in
 											 expr e2 regValExpr lCalcAddr
 		(* C'est très simple puisque on sait que tous les champs de structure font 8 bytes *)
-		| Ttree.Esizeof s -> generate (Econst (Int32.of_int (8 * (List.length s.Ttree.str_ordered_fields)), destr, destl))
+		| Ttree.Esizeof s -> let k = 8 * (List.length s.Ttree.str_ordered_fields) in (generate (Econst ((Int32.of_int (k)), destr, destl)), true, k)
 
 		(* "Fold right 2" permet de consommer 2 listes de la droite vers la gauche en même temps ! 
 	       Pratique pour parcourir en même temps les expressions passées en paramètres et les registres dans lesquels on les met ! *)
 		| Ttree.Ecall (fid, exprlist) -> let myregs = List.map (fun x -> Register.fresh ()) exprlist in
 										 let lres = generate (Ecall (destr, fid, myregs, destl)) in
-										 List.fold_right2 (fun arg reg lab -> expr arg reg lab) exprlist myregs lres
+										 List.fold_right2 (fun arg reg (lab,_,_) -> expr arg reg lab) exprlist myregs (lres, false, 0)
  
   and stmt (s : Ttree.stmt) destl retr exitl = match s with
-		| Ttree.Sreturn e -> expr e retr exitl
-		| Ttree.Sexpr e   -> let unusedReg = Register.fresh() in expr e unusedReg destl
+		| Ttree.Sreturn e -> let (l,_,_) = expr e retr exitl in l
+		| Ttree.Sexpr e   -> let unusedReg = Register.fresh() in let (l,_,_) = expr e unusedReg destl in l
 		| Ttree.Sskip     -> destl
 
 		(* Idiome repris de "fct" *)
@@ -109,44 +112,66 @@ let rec condition e truel falsel =
 		| Ttree.Sif (e, strue, sfalse)  -> let lfalse = stmt sfalse destl retr exitl and ltrue = stmt strue destl retr exitl in
 										   let rintermed = Register.fresh () in
 										   let comparee = generate (Emubranch (Ops.Mjz, rintermed, lfalse, ltrue)) in
-										   let computee = expr e rintermed comparee in
-										   computee
+										   let (computee, reducible, v) = expr e rintermed comparee in
+										      (if reducible
+                                                then (if v = 0 then lfalse else ltrue)
+                                              else computee)
 		| Ttree.Swhile (e, s) -> let lgoto = Label.fresh () in
 								 let lInstr = stmt s lgoto retr exitl in
 								 let regInter = Register.fresh () in
 								 let lIf = generate (Emubranch (Ops.Mjz, regInter, destl, lInstr)) in
-								 let lcalc = expr e regInter lIf in
-								 graph := Label.M.add lgoto (Egoto lcalc) !graph; lcalc
+								 let (lcalc, reducible, v) = expr e regInter lIf in
+                                    if (reducible && (v = 0)) then destl 
+                                    else
+								    begin
+                                        graph := Label.M.add lgoto (Egoto lcalc) !graph; lcalc
+                                    end
 								 
 
     and generateBinop e destr destl = match e with
     	| Ttree.Ebinop (op, e1, e2) when (List.mem op [Ptree.Badd; Ptree.Bsub; Ptree.Bmul; Ptree.Bdiv]) ->  
     											let r2 = Register.fresh () in let lres = generate (Embinop (ptreeOp2Mbinop op, r2, destr, destl)) in
-    											let l2 = expr e2 r2 lres in
-    											let l1 = expr e1 destr l2 in l1
+    											let (l2, red2, v2) = expr e2 r2 lres in
+    											let (l1, red1, v1) = expr e1 destr l2 in 
+                                                
+                                                if red1 && red2 && (op <> Ptree.Bdiv || v2 <> 0) then begin
+                                                    let finalval = (match op with | Ptree.Badd -> v1+v2 | Ptree.Bsub -> v1 - v2 | Ptree.Bmul -> v1 * v2
+                                                                                  | Ptree.Bdiv -> v1 / v2 | _ -> failwith "unreachable") in
+                                                    let l = generate (Econst (Int32.of_int finalval, destr, destl)) in
+                                                    (l, true, finalval)
+                                                end
+                                                else
+                                                    (l1, false, 0)
     	| Ttree.Ebinop (Ptree.Bor, e1, e2) -> (let rintermed = Register.fresh () in 
     										  let set1 = generate (Econst (Int32.of_int 1, destr, destl)) and set0 = generate (Econst (Int32.of_int 0, destr, destl)) in
     										  let compare2 = generate (Emubranch (Ops.Mjz, rintermed, set0, set1)) in
-    										  let compute2 = expr e2 rintermed compare2 in
+    										  let (compute2, red2, v2) = expr e2 rintermed compare2 in
     										  let compare1 = generate (Emubranch (Ops.Mjz, rintermed, compute2, set1)) in
-    										  let compute1 = expr e1 rintermed compare1 in
-    										  compute1)
+    										  let (compute1, red1, v1) = expr e1 rintermed compare1 in
+                                              (* FIXME *)
+    										  (compute1, false, 0))
     	| Ttree.Ebinop (Ptree.Band, e1, e2) -> (let rintermed = Register.fresh () in 
     										  let set1 = generate (Econst (Int32.of_int 1, destr, destl)) and set0 = generate (Econst (Int32.of_int 0, destr, destl)) in
     										  let compare2 = generate (Emubranch (Ops.Mjz, rintermed, set0, set1)) in
-    										  let compute2 = expr e2 rintermed compare2 in
+    										  let (compute2, red2, v2) = expr e2 rintermed compare2 in
     										  let compare1 = generate (Emubranch (Ops.Mjz, rintermed, set0, compute2)) in
-    										  let compute1 = expr e1 rintermed compare1 in
-    										  compute1)
+    										  let (compute1, red1, v1) = expr e1 rintermed compare1 in
+                                              (* FIXME *)
+    										  (compute1, false, 0))
     	| Ttree.Ebinop (op, e1, e2)			-> let rintermed = Register.fresh () in
     										   let lres = generate (Embinop (binop2Op op, rintermed, destr, destl)) in
-    										   let l2 = expr e2 rintermed lres in 
-											   let l1 = expr e1 destr l2 in
-    										   l1
+    										   let (l2, red2, v2) = expr e2 rintermed lres in 
+											   let (l1, red1, v1) = expr e1 destr l2 in
+                                               (* FIXME *)
+    										   (l1, false, 0)
     	| _ -> failwith "Unreachable generateBinop"
 
     and generateUnop e destr destl = match e with
-    	| Ttree.Eunop (Ptree.Unot, e)  -> let lres = generate (Emunop ((Ops.Msetei (Int32.of_int 0)), destr, destl)) in let le = expr e destr lres in le 
+    	| Ttree.Eunop (Ptree.Unot, e)  -> let lres = generate (Emunop ((Ops.Msetei (Int32.of_int 0)), destr, destl)) in let (le, red, v) = expr e destr lres in
+                                            (if red then
+                                                (le, true, if v = 0 then 1 else 0)
+                                            else
+                                                (le, red, v))
     	| Ttree.Eunop (Ptree.Uminus, e) -> generateBinop (Ttree.Ebinop (Ptree.Bsub, {Ttree.expr_node = Ttree.Econst (Int32.of_int 0); Ttree.expr_typ = Ttree.Tint}, e)) destr destl
     	| _ -> failwith "nope"
 
