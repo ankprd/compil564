@@ -194,7 +194,6 @@ and typeExpr e = match e.Ptree.expr_node with
      									    	 else
      									    	    failwith "Parameter types mismatch"
      									    ) with | Not_found -> raise (Error ("Function " ^ funcname.Ptree.id ^ " is undefined !")) | Invalid_argument s -> raise (Error "Bad number of arguments !"))
-     (* binop of binop * expr * expr *)
      | Ptree.Ebinop (b, e1, e2) -> typeBinop b e1 e2
      | Ptree.Esizeof x -> try(let stored = Hashtbl.find declaredStructs x.Ptree.id in {expr_node = Ttree.Esizeof {str_name = x.Ptree.id; str_fields = stored.str_fields; str_ordered_fields = stored.str_ordered_fields}; expr_typ = Ttree.Tint}) with Not_found -> raise (Error ("Undefined structure " ^ x.Ptree.id))
 

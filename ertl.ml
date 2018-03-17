@@ -89,7 +89,7 @@ let fct (f: Rtltree.deffun) =
         |(rf::f, rr::l) -> 
             let labelSuiv = getParams f l offset in
             let curLabel = Label.fresh () in
-            addToGraph curLabel (Embinop(Ops.Mmov, rr, rf, labelSuiv)); curLabel (*mov source, dest*)
+            addToGraph curLabel (Embinop(Ops.Mmov, rr, rf, labelSuiv)); curLabel
     in
     let labelBeforeGetParams = getParams f.Rtltree.fun_formals Register.parameters 16
     in
