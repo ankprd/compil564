@@ -31,9 +31,8 @@ let compatibleTypes t1 t2 = match t1 with
                    | Tvoidstar  -> true
                    | Ttypenull  -> true
                    | _          -> false)
-  (* FIXME: c'est pas Tstructp s2 when s1 == s2 plutôt ? Là je crois que le deuxième s1 masque le premier *)
   | Tstructp s1 -> (match t2 with 
-                   | Tstructp s1 -> true
+                   | Tstructp s2 when s1.str_name = s2.str_name -> true
                    | Tvoidstar -> true
                    | Ttypenull -> true
                    | _ -> false)
@@ -50,7 +49,7 @@ let declareVar addToEnv ((ptype, nom): Ptree.decl_var) =
         (if addToEnv then Hashtbl.add environnement nom.Ptree.id (Tstructp typeS));
         (Tstructp typeS, nom.Ptree.id)
       )
-      with Not_found -> raise (Error (String.concat "" ["Undeclared structure : "; s.Ptree.id]))(*la structure n'existe pas*)
+      with Not_found -> raise (Error (String.concat "" ["Undeclared structure : "; s.Ptree.id])) (*la structure n'existe pas*)
 
 let declareStruct ((nom, listeVar) : Ptree.decl_struct) = 
   try
@@ -65,7 +64,6 @@ let declareStruct ((nom, listeVar) : Ptree.decl_struct) =
     let ajToField (typeF, nomF) = ordered := nomF::!ordered; try
     (
       let _ = Hashtbl.find fields nomF in 
-
       raise (Error "Two or more fields share the same name !")
     ) with Not_found -> Hashtbl.add fields nomF {field_name = nomF; field_typ = typeF} in
     List.iter ajToField listeF;
@@ -87,18 +85,20 @@ let rec program p =
 and typeFct f = 
   try (
     let (typeF, nomF) = (pType2Ttype f.Ptree.fun_typ, f.Ptree.fun_name) in
+
     (* Cette fonction dÃ©clare toutes les variables dans l'environnement et nous les retourne typÃ©es au sens de Ttree *)
     let declareArgs listArgs = 
-    let locenv : ((string, bool) Hashtbl.t) = Hashtbl.create (List.length listArgs) in
+      let locenv : ((string, bool) Hashtbl.t) = Hashtbl.create (List.length listArgs) in
       let rec aux listArgs =
         match listArgs with
-          | [] -> []
-          | x::t -> (try(
+        | [] -> []
+        | x::t -> (try(
                   let _ = Hashtbl.find locenv (snd x).Ptree.id in
-                  raise (Error "Variable already exists at this level of the scope !")
-                ) with Not_found -> let (xId, xTy) = declareVar true x in Hashtbl.add locenv (snd x).Ptree.id true; let res = aux t in  (xId, xTy)::res) in
-      aux listArgs in
-    
+                    raise (Error "Variable already exists in this scope !")
+                  ) with Not_found -> let (xId, xTy) = declareVar true x in Hashtbl.add locenv (snd x).Ptree.id true; let res = aux t in  (xId, xTy)::res)
+      in
+      aux listArgs 
+    in  
     (* Maintenant qu'on a typÃ© les arguments, on peut dÃ©clarer la fonction dans environnementFcts *)
     let listArgs = declareArgs f.Ptree.fun_formals in
     declareFct nomF.Ptree.id {fun_typ = typeF; fun_name = nomF.Ptree.id; fun_formals = listArgs; fun_body = ([], [])};
@@ -106,8 +106,7 @@ and typeFct f =
     let (declVar, listInstr) = f.Ptree.fun_body in
     let listVars = declareArgs declVar in
     let listInstT = List.map (typeStmt typeF) listInstr in
-    
-
+  
     (* On supprime tout ce qu'on a ajoutÃ© dans l'environnement *)
     List.iter (fun c -> (Hashtbl.remove environnement (snd c))) (listVars);
     List.iter (fun c -> (Hashtbl.remove environnement (snd c))) (listArgs);
@@ -166,28 +165,12 @@ and typeExpr e = match e.Ptree.expr_node with
           let (expreLarrow, fieldRes) = typeLarrow (Ptree.Larrow (expres, nomLarrow)) in
           let typeExprAAss = typeExpr expresAAss in
           if compatibleTypes fieldRes.field_typ typeExprAAss.expr_typ then  {expr_node = Ttree.Eassign_field (expreLarrow, fieldRes, typeExprAAss); expr_typ = fieldRes.field_typ}
-          else raise (Error ("Tried to assign value of type "^(ttreeTypeToString typeExprAAss.expr_typ)^" to field of type "^(ttreeTypeToString fieldRes.field_typ)))
-
-     (*| Ptree.Eright lval -> (match typeLVar lval with 
-                            	| (None, Some (var, field))      -> {expr_node = Ttree.Eaccess_field (var, field); expr_typ = var.expr_typ}
-              					| (Some (typeVar, nomVar), None) -> {expr_node = Ttree.Eaccess_local nomVar; expr_typ = typeVar}
-        						| (_, _) -> raise (Error "this should never have happened, in typeExpr, Eright lval"))
-     | Ptree.Eassign (lval, exprP) -> (
-        let exprT = typeExpr exprP in
-        match typeLVar lval with
-        |(None, Some (var, field)) -> 
-            if (compatibleTypes exprT.expr_typ field.field_typ) then {expr_node = Ttree.Eassign_field (var, field, exprT); expr_typ = var.expr_typ}
-            else raise (Error (String.concat "" ["Tried to assign value of type "; ttreeTypeToString exprT.expr_typ; " to field of type "; ttreeTypeToString field.field_typ]))
-        |(Some (typeVar, nomVar), None) ->
-            if (compatibleTypes exprT.expr_typ typeVar) then {expr_node = Ttree.Eassign_local (nomVar, exprT); expr_typ = typeVar}
-            else raise (Error (String.concat "" ["Tried to assign value of type "; ttreeTypeToString exprT.expr_typ; " to var of type "; ttreeTypeToString typeVar]))
-        |(_, _) -> raise (Error "this should never have happended, in typeExpr, Eassign")
-     )*)         
+          else raise (Error ("Tried to assign value of type "^(ttreeTypeToString typeExprAAss.expr_typ)^" to field of type "^(ttreeTypeToString fieldRes.field_typ)))      
      | Ptree.Eunop (op, expr) -> (let exprT = typeExpr expr in match op with
      								| Ptree.Unot -> {expr_node = Ttree.Eunop (Ptree.Unot, exprT); expr_typ = Ttree.Tint}
      								| Ptree.Uminus -> (if compatibleTypes exprT.expr_typ Ttree.Tint then 
      													{expr_node = Ttree.Eunop (Ptree.Uminus, exprT); expr_typ = Ttree.Tint}
-     												  else (* TODO: être plus précis *)
+     												  else 
      												    raise (Error "Cannot negate something that is not compatible with an integer")))
      | Ptree.Ecall (funcname, exprl) when funcname.Ptree.id = "putchar" -> (if List.length exprl = 1 then
      																	let te = typeExpr (List.hd exprl) in
@@ -215,19 +198,6 @@ and typeExpr e = match e.Ptree.expr_node with
      | Ptree.Ebinop (b, e1, e2) -> typeBinop b e1 e2
      | Ptree.Esizeof x -> try(let stored = Hashtbl.find declaredStructs x.Ptree.id in {expr_node = Ttree.Esizeof {str_name = x.Ptree.id; str_fields = stored.str_fields; str_ordered_fields = stored.str_ordered_fields}; expr_typ = Ttree.Tint}) with Not_found -> raise (Error ("Undefined structure " ^ x.Ptree.id))
 
-(* retourne (Some ident, Some (expr, field)), pour pouvoir gérer les 2 cas qui correspondent à des types différents *)
-(*and typeLVar lvar  : (typ * ident) option * (expr * field) option = match lvar with
-	| Ptree.Lident var -> (try (Some (Hashtbl.find environnement var.Ptree.id, var.Ptree.id), None) with Not_found -> raise (Error (String.concat "" ["Undeclared var "; var.Ptree.id])))
-  | Ptree.Larrow (expression, nomField) -> (
-        let var = typeExpr expression in (
-        match var.expr_typ with
-        	| Tstructp s -> 
-          		let structTyp = (try Hashtbl.find declaredStructs s.str_name with Not_found -> raise (Error (String.concat "" ["Undeclared structure : "; s.str_name]))) in
-          		let field = (try Hashtbl.find structTyp.str_fields nomField.Ptree.id with Not_found -> raise (Error (String.concat "" ["No field "; nomField.Ptree.id; " in struct "; s.str_name]))) in
-          		(None, Some (var, field))
-        	| _ -> raise (Error "Tried to access a field of something that is not a structure")
-        )
-      )*)
 and typeLIdent lidentVar = try Hashtbl.find environnement lidentVar.Ptree.id with Not_found -> raise (Error (String.concat "" ["Undeclared var "; lidentVar.Ptree.id]))
 
 and typeLarrow lvaria = 
@@ -247,13 +217,8 @@ and typeLarrow lvaria =
               (var, {field_name = fieldRes.field_name; field_typ = fieldTyp})
       | _ -> raise (Error "Tried to access a field of something that is not a structure")
     ))
+
  (* Fait la conversion PtreeType -> TtreeType. Va piocher dans declaredStructs s'il le faut et gueule si ça foire *)
- (*
- and structure = {
-  str_name  : ident;
-  str_fields: (ident, field) Hashtbl.t;
-  (* on pourra ajouter plus tard ici la taille totale de la structure *)
-}*)
  and pType2Ttype ptype = match ptype with
  	| Ptree.Tint          -> Ttree.Tint
  	| Ptree.Tstructp name -> (try (let stored = Hashtbl.find declaredStructs name.Ptree.id in Ttree.Tstructp stored) with Not_found -> raise (Error ("Unknown structure " ^ name.Ptree.id)))
