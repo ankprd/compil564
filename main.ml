@@ -90,7 +90,7 @@ let () =
   let debug = !debug in
   let f = open_in !ifile in
   let buf = Lexing.from_channel f in
-  try
+  try (
     let p = Parser.file Lexer.token buf in
     close_in f;
     
@@ -161,6 +161,7 @@ let () =
             print_string "=== ASM ==================================================\n";
             X86_64.print_program std_formatter {text = X86_64.(++) (X86_64.globl "main") ultim_prog.text; data = ultim_prog.data};
         end
+  )
   with
     | Lexer.Lexical_error c ->
 	localisation (Lexing.lexeme_start_p buf);

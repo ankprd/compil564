@@ -48,7 +48,7 @@ let rec lin (g : Ltltree.instr Label.M.t) l :unit=
   end
 
 and instr (g  : Ltltree.instr Label.M.t) l (instru : Ltltree.instr) : unit= 
-    (*on renvoie 3 elements car les types sont differents, et si true c'est le 3eme et pas le 2eme et si false c;est le 2eme*)
+    (*1er element indique si set ou arith ou div, 2eme ou 3eme correspond a la traduction en assembleur*)
     let isSetAndTranslateBinop (ope : Ops.mbinop)  = 
       match ope with
       |Ops.Msete -> (1, X86_64.addq, X86_64.sete)
@@ -78,16 +78,15 @@ and instr (g  : Ltltree.instr Label.M.t) l (instru : Ltltree.instr) : unit=
     | Ltltree.Emunop (Ops.Msetnei n, op, l1) -> emit l (X86_64.cmpq (X86_64.imm32 n) (operand op)); emit l (X86_64.setne (X86_64.reg X86_64.r11b)); 
                                                 emit_wl (X86_64.movzbq (X86_64.reg X86_64.r11b) (X86_64.r11)); (*on etend pas directement dans op car movzbq attend un registre en 2eme argument et op n'en est pas forcement un*)
                                                emit_wl (X86_64.movq (X86_64.reg X86_64.r11) (operand op));
-                                               lin g l1 (*zbq ou sbq ?*)(*idem*)
+                                               lin g l1
     | Ltltree.Embinop (oper, r1, r2, l1) -> (
       let (isSet, opeF, opeT) = isSetAndTranslateBinop oper in
        match isSet with
         | 2 -> emit l (X86_64.pushq (X86_64.reg X86_64.rdx)); 
-               emit_wl (X86_64.movq (X86_64.reg X86_64.rax) (X86_64.reg X86_64.rdx)); (*TODO : If rax was negative, rdx:rax will not be and the result of the division will probably end up wrong*)
+               emit_wl (X86_64.movq (X86_64.reg X86_64.rax) (X86_64.reg X86_64.rdx));
                emit_wl (X86_64.sarq (X86_64.imm 32) (X86_64.reg X86_64.rdx));
-               (*emit_wl (X86_64.sarq (X86_64.imm 1) (X86_64.reg X86_64.rdx));*)
                emit_wl (X86_64.idivq (operand r1)); 
-               emit_wl (X86_64.popq X86_64.rdx) (*attention on trashe rdx et r2 est rax normalement (cf generation de ertl)*)
+               emit_wl (X86_64.popq X86_64.rdx) (*r2 est rax (cf generation de ertl)*)
         | 0 -> (match (r1, r2) with 
                   | (Ltltree.Reg rr1, x) -> emit l (opeF (operand r1) (operand r2))
                   | (x, Ltltree.Reg rr2) -> emit l (opeF (operand r1) (operand r2))

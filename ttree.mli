@@ -21,7 +21,6 @@ and structure = {
 and field = {
   field_name: string;
   field_typ : typ;
-  (* on pourra ajouter plus tard ici la position du champ dans la structure *)
 }
 
 type unop = Ptree.unop

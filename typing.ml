@@ -213,7 +213,7 @@ and typeLarrow lvaria =
               let fieldTyp = (match fieldRes.field_typ with
                               | Tstructp sf when sf.str_name = s.str_name -> Tstructp s
                               | _ -> fieldRes.field_typ
-              ) in
+              ) in (*Pour un type recursif : struct.struct est de bien de type struct mais n'a aucun champ -> on renvoie le type de struct, plutot que de struct.struct *)
               (var, {field_name = fieldRes.field_name; field_typ = fieldTyp})
       | _ -> raise (Error "Tried to access a field of something that is not a structure")
     ))

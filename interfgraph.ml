@@ -44,7 +44,7 @@ let addIAndP setInterfs listePrefs reg curIgraph =
 let traiteInstr (label : Label.t) liveInfo (curIgraph : arcs Register.M.t) : arcs Register.map =
     let (regInterfs, regPrefs) = 
         match liveInfo.Liveness.instr with
-        |Ertltree.Embinop (Ops.Mmov, regOr, regDest, l) -> (Register.S.remove regOr liveInfo.Liveness.outs, [regOr]) (*liste for prefs because one or 0 elements and easier to write that way*)
+        |Ertltree.Embinop (Ops.Mmov, regOr, regDest, l) -> (Register.S.remove regOr liveInfo.Liveness.outs, [regOr]) (*[regOr] = liste des preferences, juste pour avoir un match facile*)
         | _ -> (liveInfo.Liveness.outs, [])
     in
     Register.S.fold (addIAndP regInterfs regPrefs) liveInfo.Liveness.defs curIgraph

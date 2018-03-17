@@ -1,4 +1,3 @@
-
-int main(){
-	return 0;
+int main() {
+  putchar(1 / 0);
 }

@@ -1,8 +1,4 @@
 (*Coloration du graphe d' inference*)
-(*TYPE GRAPH
-type arcs = { prefs: Register.set; intfs: Register.set }
-type igraph = arcs Register.map
-*)
 
 open Ltltree
 open Format
@@ -23,9 +19,9 @@ let addRegToTodo reg (arcsReg : Interfgraph.arcs) oldTodo =
     let setRegPoss =  Register.S.fold (Register.S.remove) arcsReg.Interfgraph.intfs Register.allocatable in
     Register.M.add reg setRegPoss oldTodo)
 
-let color graph = (*renvoie (coloration, nbCouleurs)*) (*Ca serait bien de rajouter plein de assert quand on sait au une map a qu un element par ex*)
-    let todo = Register.M.fold addRegToTodo graph Register.M.empty in (*todo est une Map de key = Register et de value = set de RegisterAllocatable*)
-    let curColo = ref Register.M.empty in (*Map de Register -> Ltltree.operand (= reg ou spilled)*)
+let color graph = (*renvoie (coloration, nbCouleurs)*) (*Ca serait bien de rajouter plein de assert quand on sait qu une map a qu un element par ex*)
+    let todo : (Register.S.t Register.M.t)= Register.M.fold addRegToTodo graph Register.M.empty in (*todo est une Map de key = Register et de value = set de RegisterAllocatable*)
+    let curColo : (Ltltree.operand Register.M.t) ref = ref Register.M.empty in 
     let nbSpilled = ref 0 in (*Spilled registers are numbered from 0 to nbSpilled - 1*)
 
     let delCouleur regColore colADel keyReg (oldColsPoss : Register.S.t) = 
@@ -41,7 +37,7 @@ let color graph = (*renvoie (coloration, nbCouleurs)*) (*Ca serait bien de rajou
             (Register.S.subset colPoss arcsReg.Interfgraph.prefs) in
         let regPoss = Register.M.filter isOneColOnePref curTodo in
         if Register.M.is_empty regPoss then oneColor curTodo
-        else ( (*on a trouve au moins un reg qui a qu'une couleur qui en plus est dans ses prefs*)
+        else ( (*on a trouve au moins un reg qui n'a qu'une couleur qui en plus est dans ses prefs*)
             let (regChoisi, couleursPoss) = Register.M.min_binding regPoss in
             let couleur = Register.S.min_elt couleursPoss in
             curColo := Register.M.add regChoisi (Reg couleur) !curColo;
@@ -54,7 +50,7 @@ let color graph = (*renvoie (coloration, nbCouleurs)*) (*Ca serait bien de rajou
         let isOneColor reg colPoss = Register.S.cardinal colPoss = 1 in
         let regPoss = Register.M.filter isOneColor curTodo in
         if Register.M.is_empty regPoss then prefKnownCol curTodo
-        else ( (*on a trouve au moins un reg qui a qu'une couleur*)
+        else ( (*on a trouve au moins un reg qui n'a qu'une couleur*)
             let (regChoisi, couleursPoss) = Register.M.min_binding regPoss in
             let couleur = Register.S.min_elt couleursPoss in
             curColo := Register.M.add regChoisi (Reg couleur) !curColo;
