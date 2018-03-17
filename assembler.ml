@@ -99,26 +99,11 @@ and instr (g  : Ltltree.instr Label.M.t) l (instru : Ltltree.instr) : unit=
         | _ -> failwith "unreachable code"
       );
       lin g l1
-    (*
-    (** les mêmes que dans ERTL, mais avec operand à la place de register *)
-    | Emubranch of mubranch * operand * label * label
-    | Embbranch of mbbranch * operand * operand * label * label
-    | Epush of operand * label
-    (** légèrement modifiée *)
-    | Ecall of ident * label
-    (** nouveau *)
-    | Epop of register * label
-    *)
+
     | Ltltree.Epush (op, l1) -> emit l (X86_64.pushq (operand op)); lin g l1
     | Ltltree.Epop (r, l1) -> emit l (X86_64.popq (register r)); lin g l1
     | Ltltree.Ecall (id, l1) -> emit l (X86_64.call id); lin g l1
-    (*  opérations de branchement unaires 
-type mubranch =
-  | Mjz
-  | Mjnz
-  | Mjlei of int32
-  | Mjgi  of int32
-*)
+
     | Ltltree.Emubranch (mub, op, l1, l2) -> 
       let (valACmp, typeJump) = 
         match mub with
@@ -131,9 +116,7 @@ type mubranch =
       emit_wl (typeJump (l1 :> string));
       lin g l2;
       lin g l1
-    (*type mbbranch =
-  | Mjl
-  | Mjle*)
+
     | Ltltree.Embbranch (mub, op1, op2, l1, l2) -> 
         emit l (X86_64.cmpq (operand op1) (operand op2));
         let typeJmp = 
