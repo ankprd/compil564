@@ -9,10 +9,9 @@ int main() {
 */
 
 int main() {
-  int cpt;
-  while (cpt < 10) {
-  }
-  if (cpt == 100)
-    putchar('!');
+  if(1 < 2)
+    putchar('Y');
+  else
+    putchar('N');
   return 0;
 }
