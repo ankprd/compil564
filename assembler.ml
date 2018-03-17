@@ -10,7 +10,7 @@ let emit_plain_label l = code := Label l :: !code
 
 let emit_wl (i : X86_64.text) = code := Code i :: !code
 
-let labels = Hashtbl.create 17
+let labels : ((Label.t, unit) Hashtbl.t) = Hashtbl.create 17
 
 let need_label l = Hashtbl.add labels l ()
 
@@ -112,6 +112,7 @@ and instr (g  : Ltltree.instr Label.M.t) l (instru : Ltltree.instr) : unit=
         |Ops.Mjlei i -> (X86_64.imm32 i, X86_64.jle)
         |Ops.Mjgi i -> (X86_64.imm32 i, X86_64.jg)
       in
+      need_label l1;
       emit l (X86_64.cmpq valACmp (operand op));
       emit_wl (typeJump (l1 :> string));
       lin g l2;
@@ -124,6 +125,7 @@ and instr (g  : Ltltree.instr Label.M.t) l (instru : Ltltree.instr) : unit=
           |Ops.Mjl -> X86_64.jl
           |Ops.Mjle -> X86_64.jle
         in
+        need_label l1;
         emit_wl (typeJmp (l1 :> string));
         lin g l2;
         lin g l1

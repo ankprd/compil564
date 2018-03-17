@@ -137,10 +137,10 @@ let () =
     if debug then Ltltree.print_file std_formatter p;
     if !interp_ltl then begin ignore (Ltlinterp.program p); exit 0 end;
     
-    (* transforme une instruction assembleur en un type traitable par la suite (du string) *)
+    (* Transforme un élément e de la liste Assembler.code pour le rendre concaténable avec (++) *)
     let trans e = match e with
                     | Assembler.Code t -> t
-                    | Assembler.Label t -> X86_64.label (t :> string) in
+                    | Assembler.Label t -> if Hashtbl.mem Assembler.labels t then X86_64.label (t :> string) else X86_64.nop in
 
     (* Plie les fonctions pour en faire un programme *)
     let rec fold_functions funs = match funs with
