@@ -2,71 +2,64 @@
 	.globl	main
 
 main:
-L24:
-	pushq %rbp
-L42:
-	movq %rsp, %rbp
-L41:
-	addq $-8, %rsp
 L23:
 L22:
 L21:
-	movq $16, %rdi
 L20:
-L30:
-L29:
-	call sbrk
-L28:
+	movq $0, %rax
 L19:
-	movq %rax, -8(%rbp)
+	movq $584, %r10
 L18:
-	movq $65, %r10
+	subq %r10, %rax
 L17:
-	movq -8(%rbp), %r8
 L16:
 L15:
-	movq %r10, 0(%r8)
+	movq $4, %r10
 L14:
-	movq -8(%rbp), %r10
-L13:
-	movq 0(%r10), %rdi
-L12:
-L27:
-L26:
-	call putchar
 L25:
+	pushq %rdx
+	movq %rax, %rdx
+	sarq $32, %rdx
+	idivq %r10
+	popq %rdx
+L24:
+L13:
+L12:
 L11:
-	movq $66, %r10
+	movq $0, %r8
 L10:
-	movq -8(%rbp), %r8
+	movq $146, %r10
 L9:
+	subq %r10, %r8
 L8:
-	movq %r10, 8(%r8)
+	cmpq %r8, %rax
+	sete %r11b
+	movzbq %r11b, %r11
+	movq %r11, %rax
 L7:
-	movq -8(%rbp), %r10
+	cmpq $0, %rax
+	je L4
 L6:
-	movq 8(%r10), %rdi
+	movq $89, %rdi
 L5:
-L36:
-L35:
-	call putchar
-L34:
-L4:
-	movq $10, %rdi
-L3:
-L33:
-L32:
-	call putchar
 L31:
+L30:
+	call putchar
+L29:
 L2:
 	movq $0, %rax
 L1:
-L40:
-L39:
-L38:
-	movq %rbp, %rsp
-L43:
-	popq %rbp
-L37:
+L35:
+L34:
+L33:
+L32:
 	ret
+L4:
+	movq $78, %rdi
+L3:
+L28:
+L27:
+	call putchar
+L26:
+	jmp L2
 	.data

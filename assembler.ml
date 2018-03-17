@@ -83,8 +83,9 @@ and instr (g  : Ltltree.instr Label.M.t) l (instru : Ltltree.instr) : unit=
       let (isSet, opeF, opeT) = isSetAndTranslateBinop oper in
        match isSet with
         | 2 -> emit l (X86_64.pushq (X86_64.reg X86_64.rdx)); 
-               emit_wl (X86_64.movq (X86_64.imm 0) (X86_64.reg X86_64.rdx)); (*TODO : If rax was negative, rdx:rax will not be and the result of the division will probably end up wrong*)
-               (*emit_wl (X86_64.shlq (X86_64.reg X86_64.rdx) (X86_64.imm 32));*)
+               emit_wl (X86_64.movq (X86_64.reg X86_64.rax) (X86_64.reg X86_64.rdx)); (*TODO : If rax was negative, rdx:rax will not be and the result of the division will probably end up wrong*)
+               emit_wl (X86_64.sarq (X86_64.imm 32) (X86_64.reg X86_64.rdx));
+               (*emit_wl (X86_64.sarq (X86_64.imm 1) (X86_64.reg X86_64.rdx));*)
                emit_wl (X86_64.idivq (operand r1)); 
                emit_wl (X86_64.popq X86_64.rdx) (*attention on trashe rdx et r2 est rax normalement (cf generation de ertl)*)
         | 0 -> (match (r1, r2) with 
