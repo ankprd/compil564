@@ -71,11 +71,15 @@ and instr (g  : Ltltree.instr Label.M.t) l (instru : Ltltree.instr) : unit=
     | Ltltree.Egoto l1 -> emit_plain_label l; lin g l1
     | Ltltree.Ereturn -> emit l X86_64.ret
     | Ltltree.Emunop (Ops.Maddi n, op, l1) -> emit l (X86_64.addq (X86_64.imm32 n) (operand op)); lin g l1
-    | Ltltree.Emunop (Ops.Msetei n, op, l1) -> emit l (X86_64.sete (X86_64.reg X86_64.r11b)); 
+    (*| Ltltree.Emunop (Ops.Msetei n, op, l1) -> print_string "Hello from setei !\n";emit l (X86_64.sete (X86_64.reg X86_64.r11b)); 
                                                emit_wl (X86_64.movzbq (X86_64.reg X86_64.r11b) (X86_64.r11)); (*on etend pas directement dans op car movzbq attend un registre en 2eme argument et op n'en est pas forcement un*)
                                                emit_wl (X86_64.movq (X86_64.reg X86_64.r11) (operand op));
-                                               lin g l1 (*zbq ou sbq ?*) (*+ je comprend pas trop ce qu'est censee faire cette instruction, n est la valeur a mettre dans reg ? si c'est le cas, ca fait pas du tout ce qu'il faut ici*)
-    | Ltltree.Emunop (Ops.Msetnei n, op, l1) -> emit l (X86_64.setne (X86_64.reg X86_64.r11b)); 
+                                               lin g l1 (*zbq ou sbq ?*)*)
+    | Ltltree.Emunop (Ops.Msetei n, op, l1) -> emit l (X86_64.cmpq (X86_64.imm32 n) (operand op));  emit_wl (X86_64.sete (X86_64.reg X86_64.r11b)); 
+                                               emit_wl (X86_64.movzbq (X86_64.reg X86_64.r11b) (X86_64.r11)); (*on etend pas directement dans op car movzbq attend un registre en 2eme argument et op n'en est pas forcement un*)
+                                               emit_wl (X86_64.movq (X86_64.reg X86_64.r11) (operand op));
+                                               lin g l1
+    | Ltltree.Emunop (Ops.Msetnei n, op, l1) -> emit l (X86_64.cmpq (X86_64.imm32 n) (operand op)); emit l (X86_64.setne (X86_64.reg X86_64.r11b)); 
                                                 emit_wl (X86_64.movzbq (X86_64.reg X86_64.r11b) (X86_64.r11)); (*on etend pas directement dans op car movzbq attend un registre en 2eme argument et op n'en est pas forcement un*)
                                                emit_wl (X86_64.movq (X86_64.reg X86_64.r11) (operand op));
                                                lin g l1 (*zbq ou sbq ?*)(*idem*)
