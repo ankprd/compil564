@@ -2,22 +2,33 @@
 	.globl	main
 
 main:
-L6:
-	movq $216, %rax
-L5:
-	movq $2, %r10
-L14:
-	pushq %rdx
-	movq %rax, %rdx
-	shlq %rdx, $32
-	idivq %r10
-	popq %rdx
+L13:
+	pushq %rbp
+L25:
+	movq %rsp, %rbp
+L24:
+	addq $-8, %rsp
 L12:
-	movq %rax, %rdi
 L11:
-	call putchar
-L2:
-	movq $0, %rax
+L10:
+	movq $24, %rdi
+L9:
+L19:
+L18:
+	call sbrk
+L17:
+L8:
+	movq %rax, -8(%rsp)
+L7:
+	movq $16, %rdi
+L6:
+L16:
 L15:
-	ret
+	call sbrk
+L14:
+L5:
+	movq -8(%rsp), %r10
+L4:
+L3:
+	movq %rax, 8(%r10)
 	.data
