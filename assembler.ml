@@ -36,7 +36,7 @@ let register (rltl : Register.t) = match (rltl :> string) with
 let operand opLtl = 
     match opLtl with
     |Ltltree.Reg r -> X86_64.reg (register r)
-    |Ltltree.Spilled n -> X86_64.ind ~ofs:n (register Register.rsp)
+    |Ltltree.Spilled n -> X86_64.ind ~ofs:n (register Register.rbp)
 
 let rec lin (g : Ltltree.instr Label.M.t) l :unit=
   if not (Hashtbl.mem visited l) then begin
