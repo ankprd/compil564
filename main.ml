@@ -154,9 +154,15 @@ let () =
 
     let ultim_prog = fold_functions p.Ltltree.funs in 
         (* Print to file *)
+<<<<<<< HEAD
         X86_64.print_in_file ((String.sub !ifile 0 (String.length !ifile - 2)) ^ ".s") {text = X86_64.(++) (X86_64.globl "main") ultim_prog.text; data = ultim_prog.data}
         (* Print to stdout *)
         (*X86_64.print_program std_formatter {text = X86_64.(++) (X86_64.globl "main") ultim_prog.text; data = ultim_prog.data}*)
+=======
+        X86_64.print_in_file ((String.sub !ifile 0 (String.length !ifile - 2)) ^ ".s") {text = X86_64.(++) (X86_64.globl "main") ultim_prog.text; data = ultim_prog.data};
+        (* Print to stdout *)
+        X86_64.print_program std_formatter {text = X86_64.(++) (X86_64.globl "main") ultim_prog.text; data = ultim_prog.data}
+>>>>>>> 383f4e3fe9a0b43c41853cb73ad7f2ee90d5cb25
   with
     | Lexer.Lexical_error c ->
 	localisation (Lexing.lexeme_start_p buf);
