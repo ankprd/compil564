@@ -8,16 +8,11 @@ int main() {
 }
 */
 
-int fact(int n)
-{
-  return 0;
-}
 int main() {
-  int x, y;
-  x = 65;
-  putchar(x);
-  putchar(x = x+1);
-  putchar(y = x+1);
-  putchar(10);
+  int cpt;
+  while (cpt < 10) {
+  }
+  if (cpt == 100)
+    putchar('!');
   return 0;
 }

@@ -6,6 +6,8 @@ let code = ref []
 
 let emit l i = code := Code i :: Label l :: !code
 
+let emit_plain_label l = code := Label l :: !code
+
 let emit_wl (i : X86_64.text) = code := Code i :: !code
 
 let labels = Hashtbl.create 17
@@ -66,7 +68,7 @@ and instr (g  : Ltltree.instr Label.M.t) l (instru : Ltltree.instr) : unit=
     | Ltltree.Econst (n, r, l1) -> emit l (X86_64.movq (X86_64.imm32 n) (operand r)); lin g l1
     | Ltltree.Eload (r1, n, r2, l1) -> emit l (X86_64.movq (X86_64.ind ~ofs:n (register r1)) (X86_64.reg (register r2)))
     | Ltltree.Estore(r1, r2, n, l1) -> emit l (X86_64.movq (X86_64.reg (register r1)) (X86_64.ind ~ofs:n (register r2)))
-    | Ltltree.Egoto l1 -> lin g l1
+    | Ltltree.Egoto l1 -> emit_plain_label l; lin g l1
     | Ltltree.Ereturn -> emit l X86_64.ret
     | Ltltree.Emunop (Ops.Maddi n, op, l1) -> emit l (X86_64.addq (X86_64.imm32 n) (operand op)); lin g l1
     | Ltltree.Emunop (Ops.Msetei n, op, l1) -> emit l (X86_64.sete (X86_64.reg X86_64.r11b)); 
@@ -128,6 +130,6 @@ let jb (z: label) = ins "jb %s" z
 let jbe(z: label) = ins "jbe %s" z
 *)
     | Ltltree.Emubranch (mub, op, l1, l2) -> match mub with
-                                                | Mjz -> emit l (X86_64.jz (l1 :> string)); lin g l1; lin g l2
+                                                | Mjz -> emit l (X86_64.jz (l2 :> string)); lin g l1; lin g l2
                                                 | _ -> failwith "not yet"
     |_-> failwith "not done"
