@@ -86,7 +86,7 @@ let rec condition e truel falsel =
                                              let laccField = generate (Estore (regValExpr, regAddrMem, idField * 8, destl)) in
                                              let lassDestr = generate(Embinop (Ops.Mmov, regValExpr, destr, laccField)) in
                                              (* FIXME *)
-											 let (lCalcAddr, reducible, v) = expr e1 regAddrMem lassDestr in
+											 let (lCalcAddr, _, _) = expr e1 regAddrMem lassDestr in
 											 expr e2 regValExpr lCalcAddr
 		(* C'est très simple puisque on sait que tous les champs de structure font 8 bytes *)
 		| Ttree.Esizeof s -> let k = 8 * (List.length s.Ttree.str_ordered_fields) in (generate (Econst ((Int32.of_int (k)), destr, destl)), true, k)
