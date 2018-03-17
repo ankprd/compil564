@@ -11,25 +11,10 @@ let lookup (c : Coloration.coloring) (r : Register.t) =
 
 let addToGraph lab instru = graphLTL := Label.M.add lab instru !graphLTL
 
-
-(*
-(** Les différentes instructions ERTL *)
-type instr =
-  (** les mêmes que dans RTL *)
-  | Eload of register * int * register * label
-  | Estore of register * register * int * label
-  | Embinop of mbinop * register * register * label MOUAIS
-  | Eget_param of int * register * label
-      (** [r <- ofs(rbp)] *)
-  | Ereturn
-
-*)
-
 let is_physical r = match r with
     | Reg _ -> true
     | Spilled _ -> false
 
-(* TODO: reprendre au cas par cas les erreurs qui seront relevées lors des tests *)
 let instr c frame_size curLab curInstr = match curInstr with
   | Ertltree.Econst (n, r, l)  -> addToGraph curLab (Econst (n, lookup c r, l))
   | Ertltree.Egoto l           -> addToGraph curLab (Egoto l)
@@ -105,33 +90,6 @@ let instr c frame_size curLab curInstr = match curInstr with
                                                                      addToGraph lload (Eload (Register.tmp1, n, Register.tmp1, lmov));
                                                                      addToGraph curLab (Embinop (Ops.Mmov, Reg Register.tmp1, Spilled k2, lload))))
   | Ertltree.Ereturn -> addToGraph curLab (Ereturn)
-
-
-
-(*
-
-(** une fonction LTL *)
-type deffun = {
-  fun_name : ident;
-  fun_entry: label;
-  fun_body : cfg;
-}
-
-
-(** Une fonction ERTL. *)
-type deffun = {
-  fun_name : ident;
-  fun_formals : int; (* nb total d'arguments *)
-  fun_locals : Register.set;
-  fun_entry : label;
-  fun_body : cfg;
-}
-
-(** Un programme ERTL. *)
-type file = {
-  funs : deffun list;
-}
-*)
 
 let fct (f : Ertltree.deffun) : (Ltltree.deffun) =
     let liv  = Liveness.liveness f.fun_body in
