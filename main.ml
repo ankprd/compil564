@@ -49,36 +49,6 @@ let localisation pos =
   let c = pos.pos_cnum - pos.pos_bol + 1 in
   eprintf "File \"%s\", line %d, characters %d-%d:\n" !ifile l (c-1) c
 
-let register_print_set = Register.print_set Format.std_formatter
-
-let label_print_set = Label.print_set Format.std_formatter
-
-let label_print_list = Pp.print_list Pp.comma Label.print Format.std_formatter
-
-
-
-let print_live_info lbl liveinfo =
-  Label.print Format.std_formatter lbl; print_string ": "; Ertltree.print_instr Format.std_formatter liveinfo.instr;
-                print_string "  d={"; register_print_set liveinfo.defs; print_string "} u={";register_print_set liveinfo.uses;
-                print_string "} i={"; register_print_set liveinfo.ins; print_string "} o={"; register_print_set liveinfo.outs;
-                print_string "}\n"
-
-let print_live funcname (lmap : live_info Label.map) (entry : Ertltree.label) = 
-  print_string ("=== LIVENESS(" ^ funcname ^ ") =================================================\n");
-  let visited = Hashtbl.create 1 in
-
-  let rec visitIt curlab =
-    if not (Hashtbl.mem visited curlab) then
-    begin
-      Hashtbl.add visited curlab ();
-      let liveinfo = Label.M.find curlab lmap in
-      print_live_info curlab liveinfo;
-      List.iter visitIt liveinfo.succ;
-    end in
-
-  visitIt entry
-
-
 let () =
   Arg.parse options (set_file ifile) usage;
   if !ifile="" then begin eprintf "missing file\n@?"; exit 1 end;
@@ -105,11 +75,10 @@ let () =
     if debug then Ertltree.print_file std_formatter p;
     
     if !interp_ertl then begin ignore (Ertlinterp.program p); exit 0 end;
-    (* ... *)
 
     if !doliveness then
     begin 
-      List.iter (fun f -> let lv = Liveness.liveness f.Ertltree.fun_body in (print_live f.Ertltree.fun_name lv f.Ertltree.fun_entry); print_string "\n") (p.Ertltree.funs);
+      List.iter (fun f -> let lv = Liveness.liveness f.Ertltree.fun_body in (Liveness.print_live f.Ertltree.fun_name lv f.Ertltree.fun_entry); print_string "\n") (p.Ertltree.funs);
       exit 0
     end;
 

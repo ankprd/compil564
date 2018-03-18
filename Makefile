@@ -10,5 +10,5 @@ mini-c:
 
 clean:
 	rm _build -rf
-	rm main.native
-	rm mini-c
+	rm main.native -f
+	rm mini-c -f
