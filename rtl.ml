@@ -19,7 +19,7 @@ let binop2Op bnop = match bnop with
 
 let intofbool b = if b then 1 else 0
 
-(* Ça peut se mémoïser ça non ? Changer la datastructure "structure" pour stocker une Hashtbl var -> index plutôt que la liste ordonnée pour obtenir l'index en O(1) *)
+(* Donne l'index de l'élément e dans l. Utile notamment pour savoir quel rang a un champ dans une struct. *)
 let indexInList l e =
 	let rec aux i ll = match ll with
 		| []   -> prerr_endline "not found element in struct"; i
@@ -33,28 +33,23 @@ let ptreeOp2Mbinop op = match op with
 	| Ptree.Bmul -> Ops.Mmul
 	| _          -> failwith "Unimplemented"
 
+let has_side_effect e = match e with
+  | Ttree.Eassign_local _ -> true
+  | Ttree.Eassign_field _ -> true
+  | _ -> false
 
-let rec condition e truel falsel = 
-	match e.Ttree.expr_node with
-	| Ttree.Econst n when n = (Int32.of_int 0) -> falsel
-	| Ttree.Econst n -> truel
-	| Ttree.Eunop (unope, exprN) -> (
-			match unope with 
-			| Ptree.Unot -> condition exprN falsel truel
-			| Ptree.Uminus -> condition exprN truel falsel
-		)
-	| Ttree.Ebinop (binope, expr1, expr2) -> (
-			match binope with
-			| Ptree.Band -> condition expr1 (condition expr2 truel falsel) truel
-			| Ptree.Bor -> condition expr1 truel (condition expr2 truel falsel)
-			| _ -> failwith "to do condition"
-		)
-	| _ -> failwith "to do condition"
-
+    (* Feature : on réduit les constantes et on fait quelques optimisations triviales durant la compilation;
+       x = 30 + 1 sera réduit en x = 31
+       if(!1) dof(); else dot(); sera réduit en dot(); etc...
+    *)
 
 	(* Arguments : l'expression, le registre où stocker le résultat de celle-ci, le label à qui passer la main à la fin
-	   Renvoie : le label de l'entry point qui permet de calculer cette expression dans le graphe *)
-	and expr (e : Ttree.expr) destr destl = match e.Ttree.expr_node with
+	   Renvoie : 
+            * Le label de l'entry point qui permet de calculer cette expression dans le graphe
+            * Un booléen qui dit si cette expression est connue at compile time
+            * La valeur (entière), qui a du sens si le booléen vaut true
+    *)
+	let rec expr (e : Ttree.expr) destr destl = match e.Ttree.expr_node with
 		| Ttree.Econst n -> (generate (Econst (n, destr, destl)), true, Int32.to_int n)
 		| Ttree.Eaccess_local nomVar ->  let regVar = Hashtbl.find locenv (e.Ttree.expr_typ, nomVar)
 										 in (generate (Embinop (Ops.Mmov, regVar, destr, destl)), false, 0)
@@ -85,7 +80,6 @@ let rec condition e truel falsel =
 											 
                                              let laccField = generate (Estore (regValExpr, regAddrMem, idField * 8, destl)) in
                                              let lassDestr = generate(Embinop (Ops.Mmov, regValExpr, destr, laccField)) in
-                                             (* FIXME *)
 											 let (lCalcAddr, _, _) = expr e1 regAddrMem lassDestr in
 											 expr e2 regValExpr lCalcAddr
 		(* C'est très simple puisque on sait que tous les champs de structure font 8 bytes *)
@@ -110,38 +104,54 @@ let rec condition e truel falsel =
     									   let l1 = List.fold_right (fun stm labelnext -> stmt stm labelnext retr exitl) stmtl destl in
     									   List.iter  (fun v -> Hashtbl.remove locenv v) decvarl; l1)
 
-		(* FIXME: utiliser ta fonction condition qui fait mieux le taf (même si avec ça, ça fonctionne) ! *)
 		| Ttree.Sif (e, strue, sfalse)  -> let lfalse = stmt sfalse destl retr exitl and ltrue = stmt strue destl retr exitl in
 										   let rintermed = Register.fresh () in
 										   let comparee = generate (Emubranch (Ops.Mjz, rintermed, lfalse, ltrue)) in
 										   let (computee, reducible, v) = expr e rintermed comparee in
-										      (if reducible
-                                                then (if v = 0 then lfalse else ltrue)
-                                              else computee)
+                                              (* Si réductible, on sait quelle branche prendre. Mais attention, si l'expression testée a une side effect
+                                                 comme dans
+                                                  if((i = 1))
+                                                    putchar('Y');
+                                                  On ne veut pas juste putchar Y, on veut aussi effectuer l'expression !
+                                               *)
+										      (if reducible then
+                                                 let branch = (if v = 0 then lfalse else ltrue) in
+                                                 (if has_side_effect e.expr_node then
+                                                    let (comp, _, _) = expr e rintermed branch in comp
+                                                  else
+                                                    branch)
+                                              else
+                                                 computee
+                                               )
 		| Ttree.Swhile (e, s) -> let lgoto = Label.fresh () in
 								 let lInstr = stmt s lgoto retr exitl in
 								 let regInter = Register.fresh () in
 								 let lIf = generate (Emubranch (Ops.Mjz, regInter, destl, lInstr)) in
 								 let (lcalc, reducible, v) = expr e regInter lIf in
-                                    if (reducible && (v = 0)) then destl 
-                                    else
-								    begin
-                                        graph := Label.M.add lgoto (Egoto lcalc) !graph; lcalc
-                                    end
+                                    graph := Label.M.add lgoto (Egoto lcalc) !graph; lcalc
 								 
 
+    (* expr dans le cas où e est un binop *)
     and generateBinop e destr destl = match e with
-    	| Ttree.Ebinop (op, e1, e2) when (List.mem op [Ptree.Badd; Ptree.Bsub; Ptree.Bmul; Ptree.Bdiv]) ->  
+    	| Ttree.Ebinop (op, e1, e2) when (List.mem op [Ptree.Badd; Ptree.Bsub; Ptree.Bmul; Ptree.Bdiv]) ->
+                                                (* Structure : 
+                                                    * Calculer e1 au label l1, stocker dans destr
+                                                    * Calculer e2 au label l2, stocker dans r2
+                                                    * Appliquer le binop sur r2 et destr, stocker dans destr
+                                                *)
     											let r2 = Register.fresh () in let lres = generate (Embinop (ptreeOp2Mbinop op, r2, destr, destl)) in
     											let (l2, red2, v2) = expr e2 r2 lres in
     											let (l1, red1, v1) = expr e1 destr l2 in 
                                                 
+                                                (* Si on peut réduire les 2 et que ce n'est pas une division par 0, autant générer une constante ! *)
                                                 if red1 && red2 && (op <> Ptree.Bdiv || v2 <> 0) then begin
                                                     let finalval = (match op with | Ptree.Badd -> v1+v2 | Ptree.Bsub -> v1 - v2 | Ptree.Bmul -> v1 * v2
                                                                                   | Ptree.Bdiv -> v1 / v2 | _ -> failwith "unreachable") in
                                                     let l = generate (Econst (Int32.of_int finalval, destr, destl)) in
                                                     (l, true, finalval)
                                                 end
+
+                                                (* Sinon, on donne le flow à l1 *)
                                                 else
                                                     (l1, false, 0)
     	| Ttree.Ebinop (Ptree.Bor, e1, e2) -> (let rintermed = Register.fresh () in 
@@ -188,12 +198,14 @@ let rec condition e truel falsel =
     and generateUnop e destr destl = match e with
     	| Ttree.Eunop (Ptree.Unot, e)  -> let lres = generate (Emunop ((Ops.Msetei (Int32.of_int 0)), destr, destl)) in let (le, red, v) = expr e destr lres in
                                             (if red then
-                                                (le, true, if v = 0 then 1 else 0)
+                                                let trueval = if v = 0 then 1 else 0 in let truel = generate (Econst (Int32.of_int trueval, destr, destl)) in
+                                                (truel, true, trueval)
                                             else
                                                 (le, red, v))
     	| Ttree.Eunop (Ptree.Uminus, e) -> generateBinop (Ttree.Ebinop (Ptree.Bsub, {Ttree.expr_node = Ttree.Econst (Int32.of_int 0); Ttree.expr_typ = Ttree.Tint}, e)) destr destl
-    	| _ -> failwith "nope"
+    	| _ -> failwith "unreachable"
 
+    (* Traduit une fonction Ttree *)
     let fct (f : Ttree.decl_fun) = let rec populate (l : Ttree.decl_var list) = match l with
     									| [] -> []
     									| x::ll -> let nreg = Register.fresh () in
@@ -217,6 +229,7 @@ let rec condition e truel falsel =
 	    							fun_exit = fexit;
 	    							fun_body = !graph}
 
+    (* Traduit de Ttreee vers RTL. Il s'agit d'itérer fct sur toutes les fonctions. *)
     let program p = 
     let rec aux pl = match pl with
       | [] -> []
