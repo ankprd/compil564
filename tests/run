@@ -5,7 +5,7 @@ shopt -s nullglob
 # script de test pour le projet de compilation
 
 option=$1
-compilo=$2
+compilo="$2 -S"
 score=0
 max=0
 verbose=0

@@ -67,10 +67,6 @@ let compile ultim_prog = let asmname = ((String.sub !ifile 0 (String.length !ifi
     if not !assembly then begin
         let assembly_file = !outfile ^ ".s" in
         X86_64.print_in_file assembly_file {X86_64.text = X86_64.(++) (X86_64.globl "main") ultim_prog.X86_64.text; X86_64.data = ultim_prog.data};
-
-        (* FIXME: sert seulement à passer les tests *)
-        X86_64.print_in_file asmname {X86_64.text = X86_64.(++) (X86_64.globl "main") ultim_prog.X86_64.text; X86_64.data = ultim_prog.data};
-
         let retcode = Sys.command ("gcc -no-pie " ^ assembly_file ^ " -o " ^ !outfile) in
         if retcode <> 0 then print_string "Could'nt compile given file using GCC !\n\n";
         (* Cleanup *)
