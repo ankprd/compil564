@@ -2,6 +2,7 @@ open Ltltree
 
 let graphLTL = ref (Label.M.empty : instr Label.M.t)
 
+(* Fait une recherche dans la coloration : si un registre n'a pas été coloré, c'est très mauvais signe *)
 let lookup (c : Coloration.coloring) (r : Register.t) =
   if Register.is_hw r then 
     Reg r 
@@ -11,10 +12,7 @@ let lookup (c : Coloration.coloring) (r : Register.t) =
 
 let addToGraph lab instru = graphLTL := Label.M.add lab instru !graphLTL
 
-let is_physical r = match r with
-    | Reg _ -> true
-    | Spilled _ -> false
-
+(* Ajoute la traduction de l'instruction ERTL donnée au graphe *)
 let instr c frame_size curLab curInstr = match curInstr with
   | Ertltree.Econst (n, r, l)  -> addToGraph curLab (Econst (n, lookup c r, l))
   | Ertltree.Egoto l           -> addToGraph curLab (Egoto l)
@@ -69,12 +67,10 @@ let instr c frame_size curLab curInstr = match curInstr with
                                                  | Spilled k     -> let lcalc = Label.fresh () and lrestore = Label.fresh () in
                                                                       addToGraph lrestore (Embinop (Ops.Mmov, Reg Register.tmp1, c2, l));
                                                                       addToGraph lcalc (Embinop (op, c1, Reg Register.tmp1, lrestore));
-                                                                     addToGraph curLab (Embinop (Ops.Mmov, c2, Reg Register.tmp1, lcalc))
-                                                                   )
+                                                                     addToGraph curLab (Embinop (Ops.Mmov, c2, Reg Register.tmp1, lcalc)))
   | Ertltree.Estore (r1, r2, n, l) -> let c1 = lookup c r1 and c2 = lookup c r2 in 
                                       (match c1, c2 with
                                         | Reg rr1, Reg rr2 -> addToGraph curLab (Estore (rr1, rr2, n, l))
-
                                         | _ -> failwith "not yet implemented in store !")
   | Ertltree.Eload (r1, n, r2, l) -> let c1 = lookup c r1 and c2 = lookup c r2 in 
                                       (match c1, c2 with
@@ -91,6 +87,8 @@ let instr c frame_size curLab curInstr = match curInstr with
                                                                      addToGraph curLab (Embinop (Ops.Mmov, Reg Register.tmp1, Spilled k2, lload))))
   | Ertltree.Ereturn -> addToGraph curLab (Ereturn)
 
+(* S'occupe de la traduction d'une fonction en iterant instr (qui traduit une instruction) sur son corps.
+   C'est ici qu'on récupère la coloration car instr en a besoin ! *)
 let fct (f : Ertltree.deffun) : (Ltltree.deffun) =
     let liv  = Liveness.liveness f.fun_body in
     let grph = Interfgraph.make liv in
@@ -103,6 +101,7 @@ let fct (f : Ertltree.deffun) : (Ltltree.deffun) =
         fun_body = !graphLTL;
     }
 
+(* Traduire un programme vers LTL en traduisant mécaniquement chacune de ses fonctions *)
 let program (p : Ertltree.file) : Ltltree.file = 
     let rec aux pl = match pl with
       | [] -> []
