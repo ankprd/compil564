@@ -16,10 +16,17 @@ let doliveness = ref false
 let graphinterf = ref false
 let coloration = ref false
 let debug = ref false
+let assembly = ref false
+
+(* Est-ce que l'utilisateur a donné une directive pour l'outfile ? *)
+let provided_out = ref false
+let outfile = ref "a.out"
 
 let ifile = ref ""
 
 let set_file f s = f := s
+
+let set_out_file ofile = outfile := ofile
 
 let options =
   ["--parse-only", Arg.Set parse_only,
@@ -40,6 +47,10 @@ let options =
      "  displays the coloration (and does not compile)";
    "--debug", Arg.Set debug,
      "  debug mode";
+    "-S", Arg.Set assembly,
+     "  produce assembly code, do not assemble using gcc";
+   "-o", Arg.Tuple ([Arg.Set provided_out; Arg.String (set_out_file)]),
+     "<file> place the output into <file>"
    ]
 
 let usage = "usage: mini-c [options] file.c"
@@ -48,6 +59,30 @@ let localisation pos =
   let l = pos.pos_lnum in
   let c = pos.pos_cnum - pos.pos_bol + 1 in
   eprintf "File \"%s\", line %d, characters %d-%d:\n" !ifile l (c-1) c
+
+
+
+let compile ultim_prog = let asmname = ((String.sub !ifile 0 (String.length !ifile - 2)) ^ ".s") in (* si ifile = test.c, asmname = test.s *)
+    (* Si on doit produire un exécutable *)
+    if not !assembly then begin
+        let assembly_file = !outfile ^ ".s" in
+        X86_64.print_in_file assembly_file {X86_64.text = X86_64.(++) (X86_64.globl "main") ultim_prog.X86_64.text; X86_64.data = ultim_prog.data};
+
+        (* FIXME: sert seulement à passer les tests *)
+        X86_64.print_in_file asmname {X86_64.text = X86_64.(++) (X86_64.globl "main") ultim_prog.X86_64.text; X86_64.data = ultim_prog.data};
+
+        let retcode = Sys.command ("gcc -no-pie " ^ assembly_file ^ " -o " ^ !outfile) in
+        if retcode <> 0 then print_string "Could'nt compile given file using GCC !\n\n";
+        (* Cleanup *)
+        Sys.remove assembly_file;
+    end
+    
+    (* Si on doit se contenter d'ASM *)
+    else begin
+        let assembly_file = if !provided_out then !outfile else asmname in
+        X86_64.print_in_file assembly_file {X86_64.text = X86_64.(++) (X86_64.globl "main") ultim_prog.X86_64.text; X86_64.data = ultim_prog.data};
+    end
+
 
 let () =
   Arg.parse options (set_file ifile) usage;
@@ -122,8 +157,8 @@ let () =
                   {text = X86_64.(++) loctext p.text; data = locdata}) in
 
     let ultim_prog = fold_functions p.Ltltree.funs in 
-        (* Print to file *)
-        X86_64.print_in_file ((String.sub !ifile 0 (String.length !ifile - 2)) ^ ".s") {text = X86_64.(++) (X86_64.globl "main") ultim_prog.text; data = ultim_prog.data};
+        (* Compile *)
+        compile ultim_prog;
         (* Print to stdout *)
         if debug then 
         begin
