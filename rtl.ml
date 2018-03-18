@@ -108,11 +108,12 @@ let has_side_effect e = match e with
 										   let rintermed = Register.fresh () in
 										   let comparee = generate (Emubranch (Ops.Mjz, rintermed, lfalse, ltrue)) in
 										   let (computee, reducible, v) = expr e rintermed comparee in
+                                              
                                               (* Si réductible, on sait quelle branche prendre. Mais attention, si l'expression testée a une side effect
                                                  comme dans
                                                   if((i = 1))
                                                     putchar('Y');
-                                                  On ne veut pas juste putchar Y, on veut aussi effectuer l'expression !
+                                                  On ne veut pas juste putchar Y, on veut aussi effectuer l'assignment !
                                                *)
 										      (if reducible then
                                                  let branch = (if v = 0 then lfalse else ltrue) in
@@ -128,8 +129,20 @@ let has_side_effect e = match e with
 								 let regInter = Register.fresh () in
 								 let lIf = generate (Emubranch (Ops.Mjz, regInter, destl, lInstr)) in
 								 let (lcalc, reducible, v) = expr e regInter lIf in
-                                    graph := Label.M.add lgoto (Egoto lcalc) !graph; lcalc
-								 
+                                 
+                                 (* Il manque le cas un peu plus délicat de reducible && side_effect *)
+                                 if reducible && not (has_side_effect e.expr_node) then
+                                 (
+                                    if v = 0 then
+                                        (graph := Label.M.add lgoto (Egoto lcalc) !graph; destl)
+                                    else
+                                        (
+                                            graph := Label.M.add lgoto (Egoto lInstr) !graph;
+                                            lInstr
+                                        )
+                                  )
+                                  else
+								    (graph := Label.M.add lgoto (Egoto lcalc) !graph;lcalc)
 
     (* expr dans le cas où e est un binop *)
     and generateBinop e destr destl = match e with

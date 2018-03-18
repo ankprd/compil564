@@ -1,11 +1,8 @@
+int main() {
+  int x;
 
-int main()
-{
-  int i, k;
-
-  if((i = 0))
+  if(1+0)
     putchar('Y');
-  else
-    putchar('N');
-  return 42;
+
+  return 0;
 }
