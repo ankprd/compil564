@@ -63,7 +63,7 @@ let color graph = (*renvoie (coloration, nbCouleurs)*)
         let getColorsPrefs reg = 
             let addsColorPrefs regi (setCouleurs : Register.S.t) = 
                 if not (Register.is_pseudo regi) then Register.S.add regi setCouleurs
-                else ( (*Et si la prefs a ete spilled, on veut etre spilled pareil ? -> pour l instant si la pref a ete spilled, on fait genre elle est pas coloree donc bof*)
+                else (
                     try (
                         match (Register.M.find regi !curColo) with 
                         |Reg r -> Register.S.add r setCouleurs
