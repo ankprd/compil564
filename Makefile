@@ -8,3 +8,7 @@ main.native: *.ml*
 mini-c:
 	ln -s main.native $@
 
+clean:
+	rm _build -rf
+	rm main.native
+	rm mini-c
