@@ -1,8 +1,28 @@
-int main() {
-  int x;
+int x, y;
 
-  if(1+0)
-    putchar('Y');
+int f(int y){
+   while(y)
+      ;
+   return 2 * y;
+}
 
-  return 0;
+int doubleIfSimplifiable(int x, int y){
+   int z;
+   z = 1;
+   if(x == 1){
+      if(y == 1)
+         z = 0;
+   }
+   else{
+      if(y == 1)
+         z = 0;   
+   }
+   return z;
+}
+
+int main(){
+   x =1;
+   x == f(1);
+   y = 2;
+   return doubleIfSimplifiable(x, y);
 }
